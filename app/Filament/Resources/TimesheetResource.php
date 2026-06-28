@@ -1,0 +1,546 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Concerns\ConfiguresTableToolbar;
+use App\Filament\Forms\Components\DailyTasksGrid;
+use App\Filament\Forms\Components\WeeklyTimesheetPlanner;
+use App\Filament\Resources\TimesheetResource\Pages;
+use App\Models\Setting;
+use App\Models\Timesheet;
+use App\Models\User;
+use App\Rules\ValidDailyHours;
+use App\Rules\WeekStartsOnMonday;
+use App\Support\AuditLogger;
+use App\Support\TimesheetAccess;
+use App\Support\TimesheetNotifier;
+use Carbon\Carbon;
+use Filament\Forms;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
+
+class TimesheetResource extends Resource
+{
+    use ConfiguresTableToolbar;
+
+    protected static ?string $model = Timesheet::class;
+    protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
+    protected static string|\UnitEnum|null $navigationGroup = 'Time Tracking';
+    protected static ?int $navigationSort = 1;
+
+    public static function getNavigationLabel(): string
+    {
+        $user = auth()->user();
+
+        return ($user && $user->isEmployee()) ? 'My Timesheets' : 'All Timesheets';
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema
+            ->schema([
+                \Filament\Schemas\Components\Section::make('Project')
+                    ->description('Choose where you worked and your role on the project.')
+                    ->icon('heroicon-o-briefcase')
+                    ->schema([
+                        Forms\Components\Select::make('user_id')
+                            ->relationship('user', 'name')
+                            ->required()
+                            ->searchable()
+                            ->visible(fn () => auth()->user()->isApprover()),
+                        Forms\Components\Select::make('project_id')
+                            ->relationship(
+                                'project',
+                                'name',
+                                function (Builder $query, $livewire): void {
+                                    $query->where('status', 'active');
+
+                                    if (! auth()->user()?->isEmployee()) {
+                                        return;
+                                    }
+
+                                    $query->where(function (Builder $employeeProjects) use ($livewire): void {
+                                        $employeeProjects->whereHas(
+                                            'members',
+                                            fn (Builder $members) => $members->whereKey(auth()->id()),
+                                        );
+
+                                        $record = method_exists($livewire, 'getRecord')
+                                            ? $livewire->getRecord()
+                                            : null;
+
+                                        if ($record?->project_id) {
+                                            $employeeProjects->orWhere('projects.id', $record->project_id);
+                                        }
+                                    });
+                                },
+                            )
+                            ->required()
+                            ->searchable()
+                            ->preload()
+                            ->live(),
+                        Forms\Components\TextInput::make('project_role')
+                            ->label('Project role')
+                            ->placeholder('e.g. Site Engineer, Developer')
+                            ->maxLength(100)
+                            ->required()
+                            ->visible(fn (Get $get): bool => filled($get('project_id'))),
+                    ])
+                    ->columns(2),
+
+                \Filament\Schemas\Components\Section::make('Date')
+                    ->description('Pick the day you want to log. The form opens on that day automatically.')
+                    ->icon('heroicon-o-calendar')
+                    ->schema([
+                        Forms\Components\DatePicker::make('work_date')
+                            ->label('Work date')
+                            ->required()
+                            ->native(false)
+                            ->displayFormat('d/m/Y')
+                            ->format('Y-m-d')
+                            ->default(Carbon::now()->format('Y-m-d'))
+                            ->closeOnDateSelection()
+                            ->live()
+                            ->dehydrated(false)
+                            ->afterStateHydrated(function ($state, Set $set): void {
+                                $date = filled($state)
+                                    ? Carbon::parse($state)
+                                    : Carbon::now();
+
+                                if (blank($state)) {
+                                    $set('work_date', $date->format('Y-m-d'));
+                                }
+
+                                $set('week_start', $date->copy()->startOfWeek(Carbon::MONDAY)->format('Y-m-d'));
+                            })
+                            ->afterStateUpdated(function (?string $state, Set $set, $livewire): void {
+                                if (blank($state)) {
+                                    return;
+                                }
+
+                                $date = Carbon::parse($state);
+                                $set('week_start', $date->copy()->startOfWeek(Carbon::MONDAY)->format('Y-m-d'));
+
+                                $livewire->dispatch(
+                                    'timesheet-date-chosen',
+                                    dayIndex: max(0, min(6, $date->dayOfWeekIso - 1)),
+                                );
+                            }),
+                        Forms\Components\Hidden::make('week_start')
+                            ->default(Carbon::now()->startOfWeek(Carbon::MONDAY)->format('Y-m-d'))
+                            ->dehydrated()
+                            ->required(),
+                    ])
+                    ->visible(fn (Get $get): bool => filled($get('project_id')) && filled($get('project_role')))
+                    ->columns(2),
+
+                \Filament\Schemas\Components\Section::make('Time entry')
+                    ->description('Fill in hours and activity for the selected day, then move through the week.')
+                    ->icon('heroicon-o-clock')
+                    ->schema([
+                        WeeklyTimesheetPlanner::make('hours')
+                            ->hiddenLabel()
+                            ->columnSpanFull(),
+                        DailyTasksGrid::make('tasks')
+                            ->hiddenLabel()
+                            ->view('filament.forms.components.empty-field')
+                            ->dehydrated(),
+                        Forms\Components\Textarea::make('notes')
+                            ->label('Additional notes')
+                            ->placeholder('Optional notes for the whole week')
+                            ->rows(2),
+                    ])
+                    ->visible(fn (Get $get): bool => filled($get('project_id')) && filled($get('project_role'))),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        $user = auth()->user();
+
+        return static::configureTableToolbar($table
+            ->columns([
+                Tables\Columns\TextColumn::make('user.name')
+                    ->searchable()
+                    ->sortable()
+                    ->visible(fn() => $user && !$user->isEmployee()),
+                Tables\Columns\TextColumn::make('project.code')
+                    ->badge()
+                    ->color('primary')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('project.name')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('week_start')
+                    ->label('Week start')
+                    ->date('d/m/Y')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('week_number')
+                    ->label('Week')
+                    ->getStateUsing(fn(Timesheet $record) => $record->week_start->isoWeek()),
+                Tables\Columns\TextColumn::make('total_hours')
+                    ->label('Total Hours')
+                    ->getStateUsing(fn(Timesheet $record) => $record->totalHours() . 'h')
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('status')
+                    ->badge()
+                    ->color(fn(string $state) => match ($state) {
+                        'approved' => 'success',
+                        'pending_pd', 'pending_pm' => 'warning',
+                        'rejected' => 'danger',
+                        default => 'gray',
+                    })
+                    ->formatStateUsing(fn(string $state) => ucwords(str_replace('_', ' ', $state)))
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('status')
+                    ->options([
+                        'draft' => 'Draft',
+                        'pending_pm' => 'Pending PM',
+                        'pending_pd' => 'Pending Director',
+                        'approved' => 'Approved',
+                        'rejected' => 'Rejected',
+                    ]),
+                Tables\Filters\SelectFilter::make('project_id')
+                    ->relationship(
+                        'project',
+                        'name',
+                        fn (Builder $query) => TimesheetAccess::scopeProjectsForUser($query, auth()->user()),
+                    )
+                    ->searchable()
+                    ->preload(),
+                Tables\Filters\Filter::make('approved_by_me')
+                    ->label('Approved by me')
+                    ->visible(fn () => $user?->isApprover() ?? false)
+                    ->query(fn (Builder $query) => $query->whereHas(
+                        'approvalLogs',
+                        fn (Builder $logQuery) => $logQuery
+                            ->where('user_id', auth()->id())
+                            ->whereIn('action', ['approved_pm', 'approved_pd']),
+                    )),
+                Tables\Filters\SelectFilter::make('user_id')
+                    ->relationship('user', 'name')
+                    ->searchable()
+                    ->preload()
+                    ->visible(fn() => $user && !$user->isEmployee()),
+            ])
+            ->actions([
+                \Filament\Actions\ViewAction::make(),
+                \Filament\Actions\EditAction::make()
+                    ->visible(fn (Timesheet $record) => auth()->user() && TimesheetAccess::userCanEditTimesheet(auth()->user(), $record)),
+                \Filament\Actions\Action::make('printPdf')
+                    ->label('Print')
+                    ->icon('heroicon-o-printer')
+                    ->color('gray')
+                    ->url(fn (Timesheet $record) => route('pdf.weekly', $record))
+                    ->openUrlInNewTab(),
+                \Filament\Actions\Action::make('submit')
+                    ->label('Submit')
+                    ->icon('heroicon-o-paper-airplane')
+                    ->color('primary')
+                    ->visible(fn (Timesheet $record) => static::canUserSubmitTimesheet($user, $record))
+                    ->requiresConfirmation()
+                    ->modalHeading('Submit timesheet')
+                    ->modalDescription('Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.')
+                    ->action(function (Timesheet $record): void {
+                        static::submitTimesheet($record);
+
+                        \Filament\Notifications\Notification::make()
+                            ->title('Timesheet submitted')
+                            ->body('Your timesheet has been sent for approval.')
+                            ->success()
+                            ->send();
+                    }),
+                \Filament\Actions\Action::make('approve')
+                    ->label('Approve')
+                    ->icon('heroicon-o-check')
+                    ->color('success')
+                    ->visible(fn(Timesheet $record) => static::canApprove($record))
+                    ->form([
+                        Forms\Components\Textarea::make('comment')
+                            ->label('Comment (optional)')
+                            ->rows(2),
+                    ])
+                    ->action(function (Timesheet $record, array $data) {
+                        static::handleApprove($record, $data['comment'] ?? '');
+                    }),
+                \Filament\Actions\Action::make('reject')
+                    ->label('Reject')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->visible(fn (Timesheet $record) => static::canReject($record))
+                    ->form([
+                        Forms\Components\Textarea::make('comment')
+                            ->label('Reason for rejection')
+                            ->required()
+                            ->rows(2),
+                    ])
+                    ->action(function (Timesheet $record, array $data) {
+                        static::handleReject($record, $data['comment']);
+                    }),
+                \Filament\Actions\Action::make('revertToDraft')
+                    ->label('Revert to Draft')
+                    ->icon('heroicon-o-arrow-uturn-left')
+                    ->color('warning')
+                    ->visible(fn (Timesheet $record) => auth()->user() && TimesheetAccess::userCanRevertToDraft(auth()->user(), $record))
+                    ->requiresConfirmation()
+                    ->modalHeading('Revert approved timesheet to draft')
+                    ->modalDescription('This will unlock the timesheet so the employee can edit and resubmit it. The action is recorded in the approval history.')
+                    ->form([
+                        Forms\Components\Textarea::make('reason')
+                            ->label('Reason for revert')
+                            ->required()
+                            ->rows(3)
+                            ->maxLength(1000),
+                    ])
+                    ->action(function (Timesheet $record, array $data) {
+                        static::handleRevertToDraft($record, $data['reason']);
+                    }),
+            ])
+            ->bulkActions([])
+            ->defaultSort('week_start', 'desc'));
+    }
+
+    public static function canApprove(Timesheet $record): bool
+    {
+        $user = auth()->user();
+
+        return $user ? $record->canBeApprovedBy($user) : false;
+    }
+
+    public static function canReject(Timesheet $record): bool
+    {
+        $user = auth()->user();
+
+        return $user ? $record->canBeRejectedBy($user) : false;
+    }
+
+    public static function canUserSubmitTimesheet(?User $user, Timesheet $record): bool
+    {
+        return $user instanceof User
+            && $record->isSubmittable()
+            && $record->user_id === $user->id;
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public static function validateForSubmission(Timesheet $record): void
+    {
+        $validator = Validator::make(
+            [
+                'project_id' => $record->project_id,
+                'project_role' => $record->project_role,
+                'week_start' => $record->week_start?->format('Y-m-d'),
+                'hours' => $record->hours ?? [],
+            ],
+            [
+                'project_id' => ['required'],
+                'project_role' => ['required', 'string', 'max:100'],
+                'week_start' => ['required', new WeekStartsOnMonday],
+                'hours' => ['required', new ValidDailyHours],
+            ],
+        );
+
+        $validator->after(function ($validator) use ($record): void {
+            if ($record->totalHours() <= 0) {
+                $validator->errors()->add('hours', 'Enter at least some hours before submitting.');
+            }
+        });
+
+        if ($validator->fails()) {
+            throw ValidationException::withMessages($validator->errors()->toArray());
+        }
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    public static function submitTimesheet(Timesheet $record): void
+    {
+        $user = auth()->user();
+
+        if (! static::canUserSubmitTimesheet($user, $record)) {
+            abort(403, 'You are not allowed to submit this timesheet.');
+        }
+
+        static::validateForSubmission($record);
+
+        $record->update(['status' => 'pending_pm']);
+        $record->approvalLogs()->create([
+            'user_id' => $user->id,
+            'action' => 'submitted',
+        ]);
+
+        AuditLogger::log('Timesheet submitted for approval', $record, [
+            'status' => 'pending_pm',
+        ]);
+
+        TimesheetNotifier::notifySubmitted($record->fresh(['user', 'project']));
+    }
+
+    public static function handleApprove(Timesheet $record, string $comment): void
+    {
+        $user = auth()->user();
+
+        if ($record->isPendingPm() && $record->canBeApprovedBy($user)) {
+            $requireDirector = Setting::getValue('requireDirectorApproval', true);
+
+            if ($requireDirector) {
+                $record->update(['status' => 'pending_pd']);
+                $record->approvalLogs()->create([
+                    'user_id' => $user->id,
+                    'action' => 'approved_pm',
+                    'comment' => $comment,
+                ]);
+
+                TimesheetNotifier::notifyPendingDirector($record->fresh(['user', 'project']), $comment);
+
+                AuditLogger::log('Timesheet approved by PM, pending PD', $record, [
+                    'action' => 'approved_pm',
+                    'status' => 'pending_pd',
+                ]);
+
+                return;
+            }
+
+            $record->update(['status' => 'approved']);
+            $record->approvalLogs()->create([
+                'user_id' => $user->id,
+                'action' => 'approved_pm',
+                'comment' => $comment,
+            ]);
+
+            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
+
+            AuditLogger::log('Timesheet approved (PM, final)', $record, [
+                'action' => 'approved_pm',
+                'status' => 'approved',
+            ]);
+
+            return;
+        }
+
+        if ($record->isPendingPd() && $record->canBeApprovedBy($user)) {
+            $record->update(['status' => 'approved']);
+            $record->approvalLogs()->create([
+                'user_id' => $user->id,
+                'action' => 'approved_pd',
+                'comment' => $comment,
+            ]);
+
+            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
+
+            AuditLogger::log('Timesheet approved (PD)', $record, [
+                'action' => 'approved_pd',
+                'status' => 'approved',
+            ]);
+        }
+    }
+
+    public static function handleReject(Timesheet $record, string $comment): void
+    {
+        $user = auth()->user();
+        $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_pd';
+
+        $record->update(['status' => 'rejected']);
+        $record->approvalLogs()->create([
+            'user_id' => $user->id,
+            'action' => $action,
+            'comment' => $comment,
+        ]);
+
+        TimesheetNotifier::notifyRejected($record->fresh(['user', 'project']), $user, $comment);
+
+        AuditLogger::log('Timesheet rejected', $record, [
+            'action' => $action,
+            'status' => 'rejected',
+        ]);
+    }
+
+    public static function handleRevertToDraft(Timesheet $record, string $reason): void
+    {
+        $user = auth()->user();
+
+        if (! $user || ! TimesheetAccess::userCanRevertToDraft($user, $record)) {
+            abort(403, 'You are not allowed to revert this timesheet.');
+        }
+
+        $record->update(['status' => 'draft']);
+        $record->approvalLogs()->create([
+            'user_id' => $user->id,
+            'action' => 'reverted_to_draft',
+            'comment' => $reason,
+        ]);
+
+        AuditLogger::log('Timesheet reverted to draft', $record, [
+            'action' => 'reverted_to_draft',
+            'status' => 'draft',
+        ]);
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof \App\Models\User
+            && $record instanceof Timesheet
+            && TimesheetAccess::userCanEditTimesheet($user, $record);
+    }
+
+    public static function canView(Model $record): bool
+    {
+        $user = auth()->user();
+
+        return $user instanceof \App\Models\User
+            && $record instanceof Timesheet
+            && TimesheetAccess::userCanViewTimesheet($user, $record);
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return static::canEdit($record) && $record instanceof Timesheet && $record->isDraft();
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user) {
+            TimesheetAccess::scopeTimesheetsForUser($query, $user);
+        }
+
+        return $query;
+    }
+
+    public static function getRelations(): array
+    {
+        return [];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListTimesheets::route('/'),
+            'create' => Pages\CreateTimesheet::route('/create'),
+            'edit' => Pages\EditTimesheet::route('/{record}/edit'),
+            'view' => Pages\ViewTimesheet::route('/{record}'),
+        ];
+    }
+}

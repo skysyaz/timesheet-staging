@@ -1,0 +1,1196 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+@theme {
+    --font-sans:
+        'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+        'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+/* ── Quatriz design tokens ─────────────────────────────────────────── */
+/* primary #1B3860 · ink #0F172A · line #E2E8F0 · bg #F8FAFC */
+
+/* ── Sidebar ───────────────────────────────────────────────────────── */
+.fi-sidebar {
+    @apply border-e border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950;
+}
+
+.fi-sidebar-header {
+    @apply border-b border-slate-100 px-4 py-4 dark:border-slate-800;
+}
+
+.fi-sidebar-nav-groups {
+    @apply gap-y-0.5 px-3 py-3;
+}
+
+.fi-sidebar-group-label {
+    @apply text-[0.65rem] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500;
+}
+
+.fi-sidebar-item-btn {
+    @apply rounded-lg transition-colors duration-150;
+}
+
+.fi-sidebar-item-btn:hover {
+    @apply bg-slate-50 dark:bg-slate-900;
+}
+
+.fi-sidebar-item.fi-active .fi-sidebar-item-btn {
+    @apply bg-primary-50 font-semibold text-primary-700 dark:bg-primary-950/40 dark:text-primary-300;
+}
+
+.fi-sidebar-item-btn > .fi-icon.fi-sidebar-item-icon,
+.fi-sidebar-item-btn > span.fi-icon.fi-sidebar-item-icon {
+    display: inline-flex;
+    height: 1.5rem;
+    width: 1.5rem;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+.fi-sidebar-item-btn > .fi-icon.fi-sidebar-item-icon svg,
+.fi-sidebar-item-btn > span.fi-icon.fi-sidebar-item-icon svg {
+    display: block;
+    height: 100%;
+    width: 100%;
+}
+
+/* ── Top bar & page chrome ─────────────────────────────────────────── */
+.fi-topbar-ctn {
+    z-index: 50;
+}
+
+.fi-topbar {
+    @apply border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950;
+}
+
+.fi-topbar-end,
+.fi-user-menu,
+.fi-user-menu-trigger {
+    position: relative;
+    z-index: 51;
+}
+
+/* Closed modals must never block header clicks (stale overlay after save). */
+.fi-modal:not(.fi-modal-open) {
+    pointer-events: none !important;
+}
+
+.fi-modal:not(.fi-modal-open) > .fi-modal-close-overlay {
+    pointer-events: none !important;
+    opacity: 0 !important;
+}
+
+.fi-main {
+    @apply bg-slate-50 dark:bg-slate-950;
+}
+
+.fi-page-header-heading {
+    @apply text-lg font-bold tracking-tight text-slate-900 dark:text-white;
+}
+
+.fi-page-header-subheading {
+    @apply text-sm text-slate-500 dark:text-slate-400;
+}
+
+/* ── Cards & sections ──────────────────────────────────────────────── */
+.fi-section:not(.fi-section-not-contained) {
+    @apply rounded-[10px] border border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-900;
+}
+
+.fi-section-header-heading {
+    @apply text-sm font-semibold text-slate-900 dark:text-white;
+}
+
+.fi-wi-stats-overview-stat {
+    @apply rounded-[10px] border border-slate-200 bg-white shadow-none transition-colors hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900;
+    border-bottom-width: 3px;
+}
+
+.fi-wi-stats-overview-stat.fi-color-primary {
+    border-bottom-color: rgb(29 78 216);
+}
+
+.fi-wi-stats-overview-stat.fi-color-success {
+    border-bottom-color: rgb(4 120 87);
+}
+
+.fi-wi-stats-overview-stat.fi-color-warning {
+    border-bottom-color: rgb(180 83 9);
+}
+
+.fi-wi-stats-overview-stat.fi-color-danger {
+    border-bottom-color: rgb(190 18 60);
+}
+
+.fi-wi-stats-overview-stat-value {
+    @apply text-2xl font-bold text-slate-900 dark:text-white;
+}
+
+.fi-wi-stats-overview-stat-label {
+    @apply text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400;
+}
+
+.fi-wi-chart {
+    @apply rounded-[10px] border border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-900;
+}
+
+/* ── Tables ────────────────────────────────────────────────────────── */
+.fi-ta-ctn {
+    @apply rounded-[10px] border border-slate-200 bg-white shadow-none dark:border-slate-800 dark:bg-slate-900 will-change-auto;
+}
+
+.fi-ta-header-cell {
+    @apply bg-slate-50 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-500 dark:bg-slate-900/80 dark:text-slate-400;
+}
+
+.fi-ta-row {
+    @apply border-b border-slate-100 transition-colors hover:bg-slate-50/80 dark:border-slate-800 dark:hover:bg-slate-900/50;
+}
+
+/* ── Login page ────────────────────────────────────────────────────── */
+.fi-simple-layout {
+    @apply bg-slate-100 dark:bg-slate-950;
+}
+
+.fi-simple-main-ctn {
+    @apply rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+}
+
+.fi-simple-header {
+    @apply flex flex-col items-center gap-2 text-center;
+}
+
+.fi-simple-header .fi-logo {
+    @apply object-contain;
+    order: 1;
+}
+
+.fi-simple-header::after {
+    content: 'Timesheet System';
+    order: 2;
+    display: block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(148 163 184);
+}
+
+.fi-simple-header-heading {
+    @apply text-lg font-bold text-slate-900 dark:text-white;
+    order: 3;
+}
+
+.fi-simple-header-subheading {
+    @apply text-sm text-slate-400;
+    order: 4;
+}
+
+.fi-simple-page-content {
+    @apply px-6 py-7 sm:px-8;
+}
+
+.fi-sidebar-header .fi-logo,
+.fi-topbar .fi-logo,
+.fi-simple-layout .fi-logo {
+    object-fit: contain;
+}
+
+/* ── Table filter & column manager modals ──────────────────────────── */
+.fi-ta-filters-modal .fi-modal-window,
+.fi-ta-col-manager-modal .fi-modal-window {
+    @apply overflow-hidden;
+}
+
+/* ── Dashboard welcome header ──────────────────────────────────────── */
+.corp-welcome-header {
+    @apply flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between;
+}
+
+.corp-dashboard-greeting-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 12px;
+    padding: 16px;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.dark .corp-dashboard-greeting-card {
+    background: linear-gradient(135deg, rgb(30 27 75) 0%, rgb(49 46 129) 100%);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
+}
+
+.corp-welcome-date {
+    @apply text-[11px] font-medium text-slate-500 dark:text-slate-400;
+}
+
+.corp-welcome-title {
+    @apply text-[1.35rem] font-bold leading-snug text-slate-900 dark:text-white;
+}
+
+.corp-welcome-subtitle {
+    @apply text-sm leading-relaxed text-slate-600 dark:text-slate-300;
+}
+
+.corp-welcome-actions {
+    @apply mt-2 flex w-full flex-wrap items-center gap-2;
+}
+
+.corp-btn {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-lg px-3.5 py-2 text-xs font-semibold transition-colors;
+}
+
+.corp-btn-primary {
+    @apply border border-primary-700 bg-primary-700 text-white hover:bg-primary-800;
+}
+
+.corp-btn-secondary {
+    @apply border border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800;
+}
+
+.corp-pending-badge {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-700 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300;
+}
+
+.corp-stat-card {
+    @apply flex min-h-[9rem] w-full items-center justify-center rounded-[10px] border border-slate-200 border-b-[3px] border-b-primary-600 bg-white p-5 dark:border-slate-800 dark:bg-slate-900;
+}
+
+.corp-progress-track {
+    @apply h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800;
+}
+
+.corp-progress-fill {
+    @apply h-full rounded-full bg-primary-700 transition-all duration-500;
+}
+
+.corp-day-cell {
+    @apply flex flex-col items-center rounded-xl border border-gray-200/80 bg-gray-50/50 p-4 text-center dark:border-gray-700 dark:bg-gray-800/50;
+}
+
+.corp-day-cell.is-weekend {
+    @apply bg-gray-100/80 dark:bg-gray-800/80;
+}
+
+.corp-day-cell.is-overtime {
+    @apply border-amber-300/60 bg-amber-50/50 dark:border-amber-700/40 dark:bg-amber-950/20;
+}
+
+.corp-day-hours {
+    @apply mt-1 text-2xl font-bold tabular-nums text-gray-900 dark:text-white;
+}
+
+.corp-day-label {
+    @apply text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400;
+}
+
+/* ── Timesheet create/edit — daily hour inputs ─────────────────────── */
+.corp-timesheet-days-input-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+    .corp-timesheet-days-input-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 1024px) {
+    .corp-timesheet-days-input-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+    }
+}
+
+.corp-timesheet-day-input {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 0.75rem;
+    border: 1px solid rgb(209 213 219);
+    background-color: rgb(249 250 251);
+    padding: 1rem 0.75rem;
+    text-align: center;
+}
+
+.corp-timesheet-day-input.is-weekend {
+    background-color: rgb(243 244 246);
+}
+
+.dark .corp-timesheet-day-input {
+    border-color: rgb(55 65 81);
+    background-color: rgb(31 41 55);
+}
+
+.dark .corp-timesheet-day-input.is-weekend {
+    background-color: rgb(17 24 39);
+}
+
+.corp-timesheet-day-input-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(75 85 99);
+}
+
+.dark .corp-timesheet-day-input-label {
+    color: rgb(156 163 175);
+}
+
+.corp-timesheet-hour-field {
+    width: 100%;
+    margin-top: 0.5rem;
+    border: 0;
+    background: transparent;
+    text-align: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: rgb(17 24 39);
+    caret-color: rgb(17 24 39);
+    -webkit-text-fill-color: rgb(17 24 39);
+    outline: none;
+    box-shadow: none;
+}
+
+.corp-timesheet-hour-field::placeholder {
+    color: rgb(156 163 175);
+    -webkit-text-fill-color: rgb(156 163 175);
+    opacity: 1;
+}
+
+.corp-timesheet-hour-field:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.dark .corp-timesheet-hour-field {
+    color: rgb(255 255 255);
+    caret-color: rgb(255 255 255);
+    -webkit-text-fill-color: rgb(255 255 255);
+}
+
+.dark .corp-timesheet-hour-field::placeholder {
+    color: rgb(107 114 128);
+    -webkit-text-fill-color: rgb(107 114 128);
+}
+
+.corp-timesheet-day-input-suffix {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: rgb(156 163 175);
+}
+
+.dark .corp-timesheet-day-input-suffix {
+    color: rgb(107 114 128);
+}
+
+.corp-timesheet-day-task {
+    margin-top: 0.75rem;
+}
+
+.corp-timesheet-task-field {
+    width: 100%;
+    margin-top: 0.5rem;
+    border: 0;
+    border-bottom: 1px solid rgb(209 213 219);
+    background: transparent;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+    color: rgb(17 24 39);
+    outline: none;
+    box-shadow: none;
+}
+
+.corp-timesheet-task-field::placeholder {
+    color: rgb(156 163 175);
+    opacity: 1;
+}
+
+.corp-timesheet-task-field:focus {
+    border-bottom-color: rgb(27 56 96);
+}
+
+.dark .corp-timesheet-task-field {
+    color: rgb(255 255 255);
+    border-bottom-color: rgb(75 85 99);
+}
+
+.dark .corp-timesheet-task-field::placeholder {
+    color: rgb(107 114 128);
+}
+
+/* ── Weekly timesheet planner (step-based day entry) ─────────────── */
+.corp-ts-planner {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.corp-ts-planner-strip {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.corp-ts-planner-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 9999px;
+    border: 1px solid rgb(209 213 219);
+    background: white;
+    color: rgb(55 65 81);
+    transition: all 150ms ease;
+}
+
+.corp-ts-planner-nav:hover:not(:disabled) {
+    border-color: rgb(27 56 96);
+    color: rgb(27 56 96);
+    background: rgb(234 240 248);
+}
+
+.corp-ts-planner-nav:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.dark .corp-ts-planner-nav {
+    border-color: rgb(75 85 99);
+    background: rgb(31 41 55);
+    color: rgb(209 213 219);
+}
+
+.corp-ts-planner-days {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.corp-ts-planner-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.65rem 0.35rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgb(229 231 235);
+    background: rgb(249 250 251);
+    color: rgb(55 65 81);
+    transition: all 150ms ease;
+}
+
+.corp-ts-planner-day:hover {
+    border-color: rgb(148 163 184);
+    transform: translateY(-1px);
+}
+
+.corp-ts-planner-day.is-active {
+    border-color: rgb(27 56 96);
+    background: linear-gradient(180deg, rgb(234 240 248) 0%, rgb(219 228 240) 100%);
+    box-shadow: 0 8px 20px -12px rgb(27 56 96 / 0.45);
+    color: rgb(16 38 72);
+}
+
+.corp-ts-planner-day.is-weekend {
+    background: rgb(243 244 246);
+}
+
+.corp-ts-planner-day.has-entry:not(.is-active) {
+    border-color: rgb(134 239 172);
+}
+
+.corp-ts-planner-day-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.corp-ts-planner-day-number {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.corp-ts-planner-day-hours {
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgb(22 163 74);
+}
+
+.dark .corp-ts-planner-day {
+    border-color: rgb(55 65 81);
+    background: rgb(31 41 55);
+    color: rgb(229 231 235);
+}
+
+.dark .corp-ts-planner-day.is-active {
+    background: linear-gradient(180deg, rgb(16 38 72) 0%, rgb(27 56 96) 100%);
+    color: white;
+}
+
+.corp-ts-planner-panel {
+    border-radius: 1rem;
+    border: 1px solid rgb(229 231 235);
+    background: white;
+    padding: 1.25rem;
+    box-shadow: 0 10px 30px -20px rgb(15 23 42 / 0.35);
+}
+
+.dark .corp-ts-planner-panel {
+    border-color: rgb(55 65 81);
+    background: rgb(17 24 39);
+}
+
+.corp-ts-planner-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgb(243 244 246);
+}
+
+.dark .corp-ts-planner-panel-header {
+    border-bottom-color: rgb(55 65 81);
+}
+
+.corp-ts-planner-panel-kicker {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: rgb(107 114 128);
+}
+
+.corp-ts-planner-panel-title {
+    margin-top: 0.2rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: rgb(17 24 39);
+}
+
+.dark .corp-ts-planner-panel-title {
+    color: white;
+}
+
+.corp-ts-planner-panel-total {
+    text-align: right;
+}
+
+.corp-ts-planner-panel-total-label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgb(107 114 128);
+}
+
+.corp-ts-planner-panel-total-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: rgb(27 56 96);
+}
+
+.corp-ts-planner-entry {
+    display: grid;
+    gap: 1rem;
+}
+
+.corp-ts-planner-field-label {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: rgb(75 85 99);
+}
+
+.dark .corp-ts-planner-field-label {
+    color: rgb(156 163 175);
+}
+
+.corp-ts-planner-hours-input {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgb(229 231 235);
+    background: rgb(249 250 251);
+}
+
+.dark .corp-ts-planner-hours-input {
+    border-color: rgb(55 65 81);
+    background: rgb(31 41 55);
+}
+
+.corp-ts-planner-hours-field {
+    width: 5rem;
+    border: 0;
+    background: transparent;
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: rgb(17 24 39);
+    outline: none;
+}
+
+.dark .corp-ts-planner-hours-field {
+    color: white;
+}
+
+.corp-ts-planner-task-field {
+    width: 100%;
+    resize: vertical;
+    min-height: 5.5rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgb(229 231 235);
+    background: rgb(249 250 251);
+    padding: 0.85rem 1rem;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    color: rgb(17 24 39);
+    outline: none;
+    transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.corp-ts-planner-task-field:focus {
+    border-color: rgb(27 56 96);
+    box-shadow: 0 0 0 3px rgb(27 56 96 / 0.12);
+}
+
+.dark .corp-ts-planner-task-field {
+    border-color: rgb(55 65 81);
+    background: rgb(31 41 55);
+    color: white;
+}
+
+.corp-ts-planner-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.corp-ts-planner-action {
+    border-radius: 0.7rem;
+    border: 1px solid rgb(209 213 219);
+    background: white;
+    padding: 0.55rem 0.95rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgb(55 65 81);
+    transition: all 150ms ease;
+}
+
+.corp-ts-planner-action:hover:not(:disabled) {
+    border-color: rgb(148 163 184);
+    color: rgb(27 56 96);
+}
+
+.corp-ts-planner-action.is-primary {
+    border-color: rgb(27 56 96);
+    background: rgb(27 56 96);
+    color: white;
+}
+
+.corp-ts-planner-action.is-primary:hover:not(:disabled) {
+    background: rgb(16 38 72);
+    border-color: rgb(16 38 72);
+}
+
+.corp-ts-planner-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+    .corp-ts-planner-days {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .corp-ts-planner-panel-header {
+        flex-direction: column;
+    }
+
+    .corp-ts-planner-actions {
+        flex-direction: column;
+    }
+}
+
+/* ── Weekly hours grid ─────────────────────────────────────────────── */
+.corp-weekly-hours-page .fi-page-header-main-ctn {
+    @apply px-4 py-4;
+}
+
+.corp-weekly-hours {
+    @apply flex flex-col gap-4;
+}
+
+.corp-weekly-hours-toolbar {
+    @apply flex flex-wrap items-center justify-between gap-4;
+}
+
+.corp-weekly-hours-export-actions {
+    @apply flex flex-wrap items-center gap-2;
+}
+
+.corp-weekly-hours-week-nav {
+    @apply flex items-center gap-3;
+}
+
+.corp-weekly-hours-nav-btn {
+    @apply inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition hover:bg-gray-50;
+}
+
+.dark .corp-weekly-hours-nav-btn {
+    @apply border-gray-700 bg-gray-900 text-gray-300 hover:bg-gray-800;
+}
+
+.corp-weekly-hours-week-label {
+    @apply min-w-[12rem] text-center text-sm font-semibold text-gray-900;
+}
+
+.dark .corp-weekly-hours-week-label {
+    @apply text-gray-100;
+}
+
+.corp-weekly-hours-user-select {
+    @apply min-w-[12rem];
+}
+
+.corp-weekly-hours-user-badge {
+    @apply inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700;
+}
+
+.dark .corp-weekly-hours-user-badge {
+    @apply border-gray-700 bg-gray-900 text-gray-200;
+}
+
+.corp-weekly-hours-user-avatar {
+    @apply inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700;
+}
+
+.corp-weekly-hours-table-wrap {
+    @apply overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm;
+}
+
+.dark .corp-weekly-hours-table-wrap {
+    @apply border-gray-700 bg-gray-900;
+}
+
+.corp-weekly-hours-table {
+    @apply w-full min-w-[56rem] border-collapse text-sm;
+}
+
+.corp-weekly-hours-table thead tr {
+    @apply border-b border-gray-200 bg-gray-50;
+}
+
+.dark .corp-weekly-hours-table thead tr {
+    @apply border-gray-700 bg-gray-800/80;
+}
+
+.corp-weekly-hours-table th {
+    @apply px-3 py-2.5 text-xs font-semibold uppercase tracking-wide text-gray-500;
+}
+
+.corp-weekly-hours-table td {
+    @apply border-b border-gray-100 px-2 py-2 align-middle;
+}
+
+.corp-weekly-hours-td-day,
+.corp-weekly-hours-table td.corp-weekly-hours-duration {
+    @apply text-center;
+}
+
+.dark .corp-weekly-hours-table td {
+    @apply border-gray-800;
+}
+
+.corp-weekly-hours-table tbody tr:last-child td {
+    @apply border-b-0;
+}
+
+.corp-weekly-hours-th-day {
+    @apply w-20 text-center;
+}
+
+.corp-weekly-hours-th-duration {
+    @apply w-24 text-center;
+}
+
+.corp-weekly-hours-th-project {
+    @apply min-w-[10rem] text-left;
+}
+
+.corp-weekly-hours-th-activity {
+    @apply min-w-[8rem] text-left;
+}
+
+.corp-weekly-hours-th-actions {
+    @apply w-10;
+}
+
+.corp-weekly-hours-table td.is-weekend,
+.corp-weekly-hours-table th.is-weekend {
+    @apply bg-amber-50/70;
+}
+
+.dark .corp-weekly-hours-table td.is-weekend,
+.dark .corp-weekly-hours-table th.is-weekend {
+    @apply bg-amber-950/20;
+}
+
+.corp-weekly-hours-select,
+.corp-weekly-hours-input {
+    @apply w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+}
+
+.dark .corp-weekly-hours-select,
+.dark .corp-weekly-hours-input {
+    @apply border-gray-700 bg-gray-950 text-gray-100;
+}
+
+.corp-weekly-hours-hour-input {
+    @apply mx-auto w-16 rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-center text-sm tabular-nums text-gray-900 shadow-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500;
+}
+
+.dark .corp-weekly-hours-hour-input {
+    @apply border-gray-700 bg-gray-950 text-gray-100;
+}
+
+.corp-weekly-hours-readonly {
+    @apply block px-1 text-sm text-gray-700;
+}
+
+.corp-weekly-hours-td-day .corp-weekly-hours-readonly,
+.corp-weekly-hours-duration .corp-weekly-hours-readonly {
+    @apply text-center;
+}
+
+.dark .corp-weekly-hours-readonly {
+    @apply text-gray-300;
+}
+
+.corp-weekly-hours-duration {
+    @apply text-center font-medium tabular-nums text-gray-900;
+}
+
+.dark .corp-weekly-hours-duration {
+    @apply text-gray-100;
+}
+
+.corp-weekly-hours-actions {
+    @apply text-center;
+}
+
+.corp-weekly-hours-remove {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 transition hover:bg-red-50 hover:text-red-600;
+}
+
+.dark .corp-weekly-hours-remove {
+    @apply hover:bg-red-950/40 hover:text-red-400;
+}
+
+.corp-weekly-hours-table tfoot tr {
+    @apply border-t border-gray-200 bg-gray-50;
+}
+
+.dark .corp-weekly-hours-table tfoot tr {
+    @apply border-gray-700 bg-gray-800/80;
+}
+
+.corp-weekly-hours-total-label {
+    @apply px-3 py-2.5 text-sm font-semibold text-gray-900;
+}
+
+.dark .corp-weekly-hours-total-label {
+    @apply text-gray-100;
+}
+
+.corp-weekly-hours-total-cell {
+    @apply px-2 py-2.5 text-center text-sm font-semibold tabular-nums text-gray-900;
+}
+
+.dark .corp-weekly-hours-total-cell {
+    @apply text-gray-100;
+}
+
+.corp-weekly-hours-footer {
+    @apply flex flex-wrap items-center gap-3;
+}
+
+/* ── My projects (employee view) ───────────────────────────────────── */
+.corp-my-projects {
+    @apply grid gap-4;
+}
+
+.corp-my-projects-card {
+    @apply rounded-xl border border-gray-200 bg-white p-5 shadow-sm;
+}
+
+.dark .corp-my-projects-card {
+    @apply border-gray-700 bg-gray-900;
+}
+
+.corp-my-projects-card-header {
+    @apply flex flex-wrap items-start justify-between gap-3;
+}
+
+.corp-my-projects-code {
+    @apply text-xs font-semibold uppercase tracking-wide text-primary-600;
+}
+
+.corp-my-projects-name {
+    @apply mt-1 text-lg font-semibold text-gray-900;
+}
+
+.dark .corp-my-projects-name {
+    @apply text-gray-100;
+}
+
+.corp-my-projects-role {
+    @apply mt-1 text-sm text-gray-500;
+}
+
+.corp-my-projects-description {
+    @apply mt-3 text-sm text-gray-600;
+}
+
+.dark .corp-my-projects-description {
+    @apply text-gray-300;
+}
+
+.corp-my-projects-metrics {
+    @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+}
+
+.corp-my-projects-metric-label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-gray-400;
+}
+
+.corp-my-projects-metric-value {
+    @apply mt-1 block text-sm font-semibold text-gray-900;
+}
+
+.dark .corp-my-projects-metric-value {
+    @apply text-gray-100;
+}
+
+.corp-my-projects-badge {
+    @apply inline-flex rounded-full px-3 py-1 text-xs font-semibold;
+}
+
+.corp-my-projects-badge-success {
+    @apply bg-emerald-100 text-emerald-800;
+}
+
+.corp-my-projects-badge-warning {
+    @apply bg-amber-100 text-amber-800;
+}
+
+.corp-my-projects-badge-danger {
+    @apply bg-rose-100 text-rose-800;
+}
+
+.corp-my-projects-badge-gray,
+.corp-my-projects-badge-info {
+    @apply bg-gray-100 text-gray-700;
+}
+
+.corp-my-projects-empty {
+    @apply rounded-xl border border-dashed border-gray-300 px-6 py-16 text-center text-sm text-gray-500;
+}
+
+.corp-reports-table thead tr {
+    @apply border-b border-gray-200 dark:border-gray-700;
+}
+
+.corp-reports-table tbody tr {
+    @apply border-b border-gray-100 transition-colors hover:bg-gray-50/80 dark:border-gray-800 dark:hover:bg-gray-900/50;
+}
+
+.corp-reports-table tbody tr:last-child {
+    @apply border-b-0;
+}
+
+/* ── Dashboard mobile-first layout ─────────────────────────────────── */
+.corp-dashboard .fi-page-header-main-ctn {
+    @apply px-4 py-4;
+}
+
+.corp-dashboard .fi-page-content {
+    min-height: 0;
+    gap: 16px !important;
+    padding-inline: 16px;
+    padding-bottom: 16px;
+}
+
+.corp-dashboard .fi-page-content > .fi-grid {
+    gap: 16px !important;
+    align-items: start;
+}
+
+.corp-dashboard .fi-page-content > .fi-grid > .fi-grid-col {
+    align-self: start;
+    min-height: 0;
+}
+
+.corp-dashboard .fi-wi-widget {
+    min-height: 0;
+}
+
+/* Stat cards — 2×2 grid */
+.corp-dashboard .fi-wi-stats-overview .fi-section-content > .fi-grid {
+    gap: 12px !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    border: none;
+    border-radius: 12px;
+    padding: 16px;
+    background: #fff;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+    border-bottom-width: 3px;
+    border-bottom-style: solid;
+}
+
+.dark .corp-dashboard .fi-wi-stats-overview-stat {
+    background: rgb(15 23 42);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat.fi-color-primary {
+    border-bottom-color: rgb(29 78 216);
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat.fi-color-success {
+    border-bottom-color: rgb(4 120 87);
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat.fi-color-warning {
+    border-bottom-color: rgb(180 83 9);
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat.fi-color-danger {
+    border-bottom-color: rgb(190 18 60);
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-label-ctn {
+    @apply items-center justify-between;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-label-ctn .fi-icon {
+    @apply h-3.5 w-3.5 text-slate-400;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-label {
+    @apply text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-value {
+    @apply text-[28px] font-bold leading-none text-slate-900 dark:text-white;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-description {
+    @apply mt-auto text-sm;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-description.fi-color-primary {
+    @apply text-blue-700 dark:text-blue-300;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-description.fi-color-success {
+    @apply text-emerald-700 dark:text-emerald-300;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-description.fi-color-warning {
+    @apply text-amber-700 dark:text-amber-300;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-description.fi-color-danger {
+    @apply text-rose-700 dark:text-rose-300;
+}
+
+.corp-dashboard .fi-wi-stats-overview-stat-chart {
+    display: none;
+}
+
+/* Chart cards */
+.corp-dashboard .fi-wi-chart.fi-wi-widget > .fi-section {
+    @apply rounded-xl border-0 bg-white shadow-none dark:bg-slate-900;
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+}
+
+.dark .corp-dashboard .fi-wi-chart.fi-wi-widget > .fi-section {
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.24);
+}
+
+.corp-dashboard .fi-wi-chart .fi-section-content {
+    padding: 16px;
+}
+
+.corp-dashboard .fi-wi-chart .fi-section-header {
+    padding: 16px 16px 0;
+}
+
+.corp-dashboard .fi-wi-chart .fi-section-header-heading {
+    @apply text-sm font-semibold text-slate-900 dark:text-white;
+}
+
+.corp-dashboard .fi-wi-chart .fi-section-header-description {
+    @apply text-sm text-slate-500 dark:text-slate-400;
+}
+
+.corp-dashboard .fi-wi-chart .fi-wi-chart-canvas-ctn {
+    width: 100%;
+}
+
+.corp-dashboard .fi-wi-chart .fi-wi-chart-canvas-ctn:not(.fi-wi-chart-canvas-ctn-no-aspect-ratio) {
+    aspect-ratio: auto;
+    height: 15rem;
+}
+
+.corp-dashboard .fi-page-content > .fi-grid > .fi-grid-col:last-child .fi-wi-chart-canvas-ctn:not(.fi-wi-chart-canvas-ctn-no-aspect-ratio) {
+    height: 16.25rem;
+    max-width: 18rem;
+    margin-inline: auto;
+}
+
+@media (max-width: 359px) {
+    .corp-dashboard .fi-wi-stats-overview .fi-section-content > .fi-grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+}
+
+@media (min-width: 901px) {
+    .corp-dashboard .fi-wi-stats-overview .fi-section-content > .fi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    }
+}
