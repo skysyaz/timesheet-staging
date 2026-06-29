@@ -12,7 +12,7 @@ class SecurityHardeningTest extends TestCase
 
     public function test_security_headers_are_present_on_login_page(): void
     {
-        $response = $this->get('/admin/login');
+        $response = $this->get('/login');
 
         $response->assertOk();
         $response->assertHeader('X-Frame-Options', 'SAMEORIGIN');
@@ -27,7 +27,7 @@ class SecurityHardeningTest extends TestCase
     {
         config(['security.csp_report_only' => true]);
 
-        $response = $this->get('/admin/login');
+        $response = $this->get('/login');
 
         $response->assertOk();
         $this->assertNotNull($response->headers->get('Content-Security-Policy-Report-Only'));
@@ -40,7 +40,7 @@ class SecurityHardeningTest extends TestCase
             'security.csp_enforce' => true,
         ]);
 
-        $response = $this->get('/admin/login');
+        $response = $this->get('/login');
 
         $response->assertOk();
         $response->assertHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.bunny.net; img-src 'self' data: blob:; font-src 'self' data: https://fonts.bunny.net; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");

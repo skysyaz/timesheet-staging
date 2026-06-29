@@ -7,7 +7,7 @@ $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $kernel = app(Illuminate\Contracts\Http\Kernel::class);
 
-$login = $kernel->handle(Illuminate\Http\Request::create('/admin/login', 'GET'));
+$login = $kernel->handle(Illuminate\Http\Request::create('/login', 'GET'));
 $loginHtml = $login->getContent();
 
 $user = App\Models\User::where('role', 'admin')->first();
@@ -18,7 +18,7 @@ if (! $user) {
 }
 
 auth()->login($user);
-$admin = $kernel->handle(Illuminate\Http\Request::create('/admin', 'GET'));
+$admin = $kernel->handle(Illuminate\Http\Request::create('/', 'GET'));
 $adminHtml = $admin->getContent();
 
 preg_match_all('#<link[^>]+rel=["\']?icon[^>]+>#i', $loginHtml, $loginIcons);

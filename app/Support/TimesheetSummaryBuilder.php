@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Project;
 use App\Models\Timesheet;
+use App\Support\ProjectDisplay;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -215,7 +216,7 @@ class TimesheetSummaryBuilder
         $results = [];
 
         foreach ($timesheets as $timesheet) {
-            $key = $timesheet->project?->name ?? 'Unknown';
+            $key = ProjectDisplay::listLabel($timesheet->project);
             $results[$key] = ($results[$key] ?? 0) + $timesheet->totalHours();
         }
 

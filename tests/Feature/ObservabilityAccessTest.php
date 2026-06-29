@@ -15,7 +15,7 @@ class ObservabilityAccessTest extends TestCase
         $admin = User::factory()->admin()->create();
         $this->actingAs($admin);
 
-        $this->get('/admin/activity-logs')
+        $this->get('/activity-logs')
             ->assertOk();
     }
 
@@ -24,7 +24,7 @@ class ObservabilityAccessTest extends TestCase
         $employee = User::factory()->create(['role' => 'employee']);
         $this->actingAs($employee);
 
-        $this->get('/admin/activity-logs')
+        $this->get('/activity-logs')
             ->assertForbidden();
     }
 }

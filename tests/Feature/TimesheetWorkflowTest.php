@@ -39,7 +39,7 @@ class TimesheetWorkflowTest extends TestCase
     {
         $this->actingAs($this->employee);
 
-        $response = $this->get('/admin/timesheets/create');
+        $response = $this->get('/timesheets/create');
         $response->assertStatus(200);
     }
 

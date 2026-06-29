@@ -45,12 +45,28 @@ class TimesheetAccessEditTest extends TestCase
         $this->assertFalse(TimesheetAccess::userCanEditTimesheet($employee, $timesheet));
     }
 
-    public function test_manager_cannot_edit_draft_timesheet(): void
+    public function test_manager_cannot_edit_other_users_draft_timesheet(): void
     {
         $pm = new User(['id' => 3, 'role' => 'project_manager']);
         $timesheet = new Timesheet(['user_id' => 1, 'status' => 'draft']);
 
         $this->assertFalse(TimesheetAccess::userCanEditTimesheet($pm, $timesheet));
+    }
+
+    public function test_project_manager_can_edit_own_draft_timesheet(): void
+    {
+        $pm = new User(['id' => 3, 'role' => 'project_manager']);
+        $timesheet = new Timesheet(['user_id' => 3, 'status' => 'draft']);
+
+        $this->assertTrue(TimesheetAccess::userCanEditTimesheet($pm, $timesheet));
+    }
+
+    public function test_project_director_can_edit_own_rejected_timesheet(): void
+    {
+        $pd = new User(['id' => 4, 'role' => 'project_director']);
+        $timesheet = new Timesheet(['user_id' => 4, 'status' => 'rejected']);
+
+        $this->assertTrue(TimesheetAccess::userCanEditTimesheet($pd, $timesheet));
     }
 
     public function test_admin_can_edit_any_editable_timesheet(): void

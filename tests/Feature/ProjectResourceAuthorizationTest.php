@@ -37,7 +37,7 @@ class ProjectResourceAuthorizationTest extends TestCase
         $this->assertCount(2, ProjectResource::getEloquentQuery()->get());
     }
 
-    public function test_project_manager_can_view_but_not_edit_project_created_by_someone_else(): void
+    public function test_project_manager_can_edit_assigned_project_even_when_created_by_someone_else(): void
     {
         $pm = User::factory()->projectManager()->create();
         $other = Project::create([
@@ -51,7 +51,40 @@ class ProjectResourceAuthorizationTest extends TestCase
         $this->actingAs($pm);
 
         $this->assertTrue(ProjectResource::canView($other));
-        $this->assertFalse(ProjectResource::canEdit($other));
+        $this->assertTrue(ProjectResource::canEdit($other));
+    }
+
+    public function test_project_director_can_edit_assigned_project(): void
+    {
+        $pd = User::factory()->projectDirector()->create();
+        $project = Project::create([
+            'code' => 'C',
+            'name' => 'Directed',
+            'project_manager_id' => User::factory()->projectManager()->create()->id,
+            'project_director_id' => $pd->id,
+            'created_by' => User::factory()->projectManager()->create()->id,
+        ]);
+
+        $this->actingAs($pd);
+
+        $this->assertTrue(ProjectResource::canEdit($project));
+    }
+
+    public function test_project_manager_cannot_edit_unassigned_project(): void
+    {
+        $pm = User::factory()->projectManager()->create();
+        $unassigned = Project::create([
+            'code' => 'D',
+            'name' => 'Unassigned',
+            'project_manager_id' => User::factory()->projectManager()->create()->id,
+            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'created_by' => User::factory()->projectManager()->create()->id,
+        ]);
+
+        $this->actingAs($pm);
+
+        $this->assertTrue(ProjectResource::canView($unassigned));
+        $this->assertFalse(ProjectResource::canEdit($unassigned));
     }
 
     public function test_project_manager_can_edit_project_they_created(): void

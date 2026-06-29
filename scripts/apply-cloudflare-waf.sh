@@ -21,7 +21,7 @@ if [[ -z "$TOKEN" || -z "$ZONE_ID" ]]; then
   echo ""
   echo "Manual dashboard steps (Cloudflare → skysyaz.my):"
   echo "  1. Security → WAF → Managed rules → Enable OWASP Core Ruleset"
-  echo "  2. Security → WAF → Custom rules → Block known bad bots on /admin*"
+  echo "  2. Security → WAF → Custom rules → Block known bad bots on /login"
   echo "  3. Security → Bots → Bot Fight Mode → ON"
   echo "  4. Security → Settings → Security Level → High"
   echo "  5. SSL/TLS → Full (strict)"
@@ -65,8 +65,8 @@ curl -sf -X POST "${API}/rulesets" \
     \"rules\": [
       {
         \"action\": \"managed_challenge\",
-        \"expression\": \"(http.request.uri.path contains \\\"/admin/login\\\") and cf.threat_score gt 10\",
-        \"description\": \"Challenge high-threat admin login attempts\",
+        \"expression\": \"(http.request.uri.path eq \\\"/login\\\") and cf.threat_score gt 10\",
+        \"description\": \"Challenge high-threat login attempts\",
         \"enabled\": true
       }
     ]

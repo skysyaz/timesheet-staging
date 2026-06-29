@@ -56,7 +56,7 @@
     <tr>
         <td class="label">Project</td>
         <td class="colon">:</td>
-        <td class="field-cell">{{ $timesheet->project->code ?? '' }}</td>
+        <td class="field-cell">{{ \App\Support\ProjectDisplay::listLabel($timesheet->project) }}</td>
         <td></td>
         <td class="label">Week Ending</td>
         <td class="colon">:</td>

@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Rules\ValidDailyHours;
 use App\Rules\WeekStartsOnMonday;
 use App\Support\AuditLogger;
+use App\Support\ProjectDisplay;
 use App\Support\TimesheetAccess;
 use App\Support\TimesheetNotifier;
 use Carbon\Carbon;
@@ -52,10 +53,12 @@ class TimesheetResource extends Resource
                     ->icon('heroicon-o-briefcase')
                     ->schema([
                         Forms\Components\Select::make('user_id')
-                            ->relationship('user', 'name')
+                            ->label('User')
+                            ->options(fn (): array => TimesheetAccess::assignableUserOptionsForAdmin())
+                            ->default(fn () => auth()->id())
                             ->required()
                             ->searchable()
-                            ->visible(fn () => auth()->user()->isApprover()),
+                            ->visible(fn () => auth()->user()?->isAdmin() ?? false),
                         Forms\Components\Select::make('project_id')
                             ->relationship(
                                 'project',
@@ -172,12 +175,24 @@ class TimesheetResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->visible(fn() => $user && !$user->isEmployee()),
-                Tables\Columns\TextColumn::make('project.code')
+                Tables\Columns\TextColumn::make('project.name')
+                    ->label('Project')
                     ->badge()
                     ->color('primary')
-                    ->searchable()
+                    ->formatStateUsing(
+                        fn (?string $state, Timesheet $record): string => ProjectDisplay::listLabel($record->project),
+                    )
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->whereHas(
+                            'project',
+                            fn (Builder $projectQuery) => $projectQuery
+                                ->where('name', 'like', "%{$search}%")
+                                ->orWhere('code', 'like', "%{$search}%"),
+                        );
+                    })
                     ->sortable(),
-                Tables\Columns\TextColumn::make('project.name')
+                Tables\Columns\TextColumn::make('project.code')
+                    ->label('Project code')
                     ->searchable()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -234,10 +249,9 @@ class TimesheetResource extends Resource
                             ->whereIn('action', ['approved_pm', 'approved_pd']),
                     )),
                 Tables\Filters\SelectFilter::make('user_id')
-                    ->relationship('user', 'name')
+                    ->options(fn (): array => TimesheetAccess::userFilterOptionsForViewer(auth()->user()))
                     ->searchable()
-                    ->preload()
-                    ->visible(fn() => $user && !$user->isEmployee()),
+                    ->visible(fn () => $user && ! $user->isEmployee()),
             ])
             ->actions([
                 \Filament\Actions\ViewAction::make(),
@@ -256,13 +270,23 @@ class TimesheetResource extends Resource
                     ->visible(fn (Timesheet $record) => static::canUserSubmitTimesheet($user, $record))
                     ->requiresConfirmation()
                     ->modalHeading('Submit timesheet')
-                    ->modalDescription('Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.')
+                    ->modalDescription(fn (Timesheet $record): string => static::submitConfirmationMessage($user, $record))
                     ->action(function (Timesheet $record): void {
-                        static::submitTimesheet($record);
+                        try {
+                            static::submitTimesheet($record);
+                        } catch (ValidationException $exception) {
+                            \Filament\Notifications\Notification::make()
+                                ->title('Cannot submit timesheet')
+                                ->body(collect($exception->errors())->flatten()->first() ?? 'Please complete all required fields.')
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
 
                         \Filament\Notifications\Notification::make()
                             ->title('Timesheet submitted')
-                            ->body('Your timesheet has been sent for approval.')
+                            ->body(static::submitSuccessMessage(auth()->user(), $record->fresh(['project'])))
                             ->success()
                             ->send();
                     }),
@@ -368,6 +392,30 @@ class TimesheetResource extends Resource
         }
     }
 
+    public static function submitConfirmationMessage(?User $user, Timesheet $record): string
+    {
+        $record->loadMissing('project');
+
+        if ($user && $record->project?->isManagedBy($user) && $user->canApproveAsPm()) {
+            return 'Submit this timesheet for project director approval? You will not be able to edit it until it is rejected or reverted to draft.';
+        }
+
+        return 'Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
+    }
+
+    public static function submitSuccessMessage(?User $user, Timesheet $record): string
+    {
+        if ($record->isPendingPd()) {
+            return 'Your timesheet has been sent to the project director for approval.';
+        }
+
+        if ($record->isApproved()) {
+            return 'Your timesheet has been approved.';
+        }
+
+        return 'Your timesheet has been sent for approval.';
+    }
+
     /**
      * @throws ValidationException
      */
@@ -379,19 +427,94 @@ class TimesheetResource extends Resource
             abort(403, 'You are not allowed to submit this timesheet.');
         }
 
+        static::ensureProjectRole($record);
+        $record->refresh();
+
         static::validateForSubmission($record);
 
-        $record->update(['status' => 'pending_pm']);
+        $record->loadMissing('project');
+        $project = $record->project;
+        $requireDirector = Setting::getValue('requireDirectorApproval', true);
+
         $record->approvalLogs()->create([
             'user_id' => $user->id,
             'action' => 'submitted',
         ]);
+
+        if ($project && $user->canApproveAsPm() && $project->isManagedBy($user)) {
+            $record->approvalLogs()->create([
+                'user_id' => $user->id,
+                'action' => 'approved_pm',
+                'comment' => 'Auto-approved as submitting project manager.',
+            ]);
+
+            if ($requireDirector) {
+                $record->update(['status' => 'pending_pd']);
+
+                AuditLogger::log('Timesheet submitted by PM, pending PD', $record, [
+                    'action' => 'approved_pm',
+                    'status' => 'pending_pd',
+                ]);
+
+                TimesheetNotifier::notifyPendingDirector($record->fresh(['user', 'project']));
+
+                return;
+            }
+
+            $record->update(['status' => 'approved']);
+
+            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user);
+
+            AuditLogger::log('Timesheet submitted and approved by PM', $record, [
+                'action' => 'approved_pm',
+                'status' => 'approved',
+            ]);
+
+            return;
+        }
+
+        $record->update(['status' => 'pending_pm']);
 
         AuditLogger::log('Timesheet submitted for approval', $record, [
             'status' => 'pending_pm',
         ]);
 
         TimesheetNotifier::notifySubmitted($record->fresh(['user', 'project']));
+    }
+
+    public static function ensureProjectRole(Timesheet $record): void
+    {
+        if (filled($record->project_role)) {
+            return;
+        }
+
+        $record->loadMissing('user');
+        $user = $record->user;
+
+        if (! $user || ! $record->project_id) {
+            return;
+        }
+
+        $assignedRole = $user->projects()
+            ->whereKey($record->project_id)
+            ->value('project_user.assigned_role');
+
+        if (filled($assignedRole)) {
+            $record->update(['project_role' => (string) $assignedRole]);
+
+            return;
+        }
+
+        $defaultRole = match ($user->role) {
+            'project_manager' => 'Project Manager',
+            'project_director' => 'Project Director',
+            'admin' => 'Administrator',
+            default => null,
+        };
+
+        if ($defaultRole !== null) {
+            $record->update(['project_role' => $defaultRole]);
+        }
     }
 
     public static function handleApprove(Timesheet $record, string $comment): void
@@ -519,7 +642,7 @@ class TimesheetResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with(['project', 'user']);
         $user = auth()->user();
 
         if ($user) {

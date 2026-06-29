@@ -63,6 +63,6 @@ systemctl restart timesheet-staging-queue 2>/dev/null || true
 echo "Staging deploy complete."
 REMOTE
 
-STAGING_URL="${STAGING_URL:-http://194.233.86.248/admin/login}"
+STAGING_URL="${STAGING_URL:-http://194.233.86.248/login}"
 echo ""
 echo "Staging URL: $STAGING_URL"

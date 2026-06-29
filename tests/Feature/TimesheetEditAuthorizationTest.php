@@ -62,6 +62,38 @@ class TimesheetEditAuthorizationTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_project_manager_can_access_edit_page_for_own_draft_timesheet(): void
+    {
+        $pm = User::factory()->projectManager()->create();
+        $timesheet = Timesheet::create([
+            'user_id' => $pm->id,
+            'project_id' => $this->project->id,
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($pm)
+            ->get(TimesheetResource::getUrl('edit', ['record' => $timesheet]))
+            ->assertOk();
+    }
+
+    public function test_project_manager_cannot_access_edit_page_for_other_users_draft_timesheet(): void
+    {
+        $pm = User::factory()->projectManager()->create();
+        $timesheet = Timesheet::create([
+            'user_id' => $this->employee->id,
+            'project_id' => $this->project->id,
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($pm)
+            ->get(TimesheetResource::getUrl('edit', ['record' => $timesheet]))
+            ->assertForbidden();
+    }
+
     public function test_employee_can_access_view_page_for_approved_timesheet(): void
     {
         $timesheet = Timesheet::create([

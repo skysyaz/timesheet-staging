@@ -57,7 +57,7 @@ class WeeklyHoursPageTest extends TestCase
     public function test_employee_can_access_weekly_hours_page(): void
     {
         $this->actingAs($this->employee)
-            ->get('/admin/weekly-hours')
+            ->get('/weekly-hours')
             ->assertOk();
     }
 
@@ -149,7 +149,7 @@ class WeeklyHoursPageTest extends TestCase
         $this->assertSame(['Development', 'Development', 'Development', 'Development', 'Development', '', ''], $alpha->tasks);
     }
 
-    public function test_duplicate_project_in_same_week_is_rejected(): void
+    public function test_duplicate_project_in_same_week_is_allowed_as_separate_rows(): void
     {
         Livewire::actingAs($this->employee)
             ->test(WeeklyHours::class)
@@ -158,7 +158,7 @@ class WeeklyHoursPageTest extends TestCase
                 [
                     'id' => null,
                     'project_id' => $this->projectA->id,
-                    'activity' => 'Dev',
+                    'activity' => 'Development',
                     'hours' => [4, 4, 4, 4, 4, 0, 0],
                     'status' => 'draft',
                     'editable' => true,
@@ -173,9 +173,55 @@ class WeeklyHoursPageTest extends TestCase
                 ],
             ])
             ->call('save')
-            ->assertNotified('Could not save weekly hours');
+            ->assertNotified('Weekly hours saved');
 
-        $this->assertDatabaseCount('timesheets', 0);
+        $this->assertDatabaseCount('timesheets', 2);
+
+        $this->assertSame(
+            2,
+            Timesheet::query()
+                ->where('user_id', $this->employee->id)
+                ->where('project_id', $this->projectA->id)
+                ->count(),
+        );
+
+        $activities = Timesheet::query()
+            ->where('user_id', $this->employee->id)
+            ->where('project_id', $this->projectA->id)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Timesheet $timesheet): string => $timesheet->tasks[0] ?? '')
+            ->all();
+
+        $this->assertSame(['Development', 'QA'], $activities);
+    }
+
+    public function test_duplicate_project_rows_sum_into_weekly_totals(): void
+    {
+        $component = Livewire::actingAs($this->employee)
+            ->test(WeeklyHours::class)
+            ->set('weekStart', $this->monday->toDateString())
+            ->set('rows', [
+                [
+                    'id' => null,
+                    'project_id' => $this->projectA->id,
+                    'activity' => 'Activity 1',
+                    'hours' => [2, 0, 0, 0, 0, 0, 0],
+                    'status' => 'draft',
+                    'editable' => true,
+                ],
+                [
+                    'id' => null,
+                    'project_id' => $this->projectA->id,
+                    'activity' => 'Activity 2',
+                    'hours' => [3, 0, 0, 0, 0, 0, 0],
+                    'status' => 'draft',
+                    'editable' => true,
+                ],
+            ]);
+
+        $this->assertSame('5:00', $component->instance()->columnTotals()[0]);
+        $this->assertSame('5:00', $component->instance()->grandTotal());
     }
 
     public function test_week_navigation_loads_a_different_week(): void
@@ -337,7 +383,7 @@ class WeeklyHoursPageTest extends TestCase
         ]);
     }
 
-    public function test_save_without_row_id_updates_existing_draft_for_same_project(): void
+    public function test_save_with_row_id_updates_existing_draft(): void
     {
         $existing = Timesheet::create([
             'user_id' => $this->employee->id,
@@ -354,7 +400,7 @@ class WeeklyHoursPageTest extends TestCase
             ->set('weekStart', $this->monday->toDateString())
             ->set('rows', [
                 [
-                    'id' => null,
+                    'id' => $existing->id,
                     'project_id' => $this->projectA->id,
                     'activity' => 'Updated activity',
                     'hours' => [8, 8, 8, 8, 8, 0, 0],
@@ -374,7 +420,7 @@ class WeeklyHoursPageTest extends TestCase
         $this->assertSame([8, 8, 8, 8, 8, 0, 0], $existing->hours);
     }
 
-    public function test_cannot_add_second_row_for_project_with_existing_submitted_timesheet(): void
+    public function test_can_add_draft_row_for_project_with_existing_submitted_timesheet(): void
     {
         Timesheet::create([
             'user_id' => $this->employee->id,
@@ -393,7 +439,7 @@ class WeeklyHoursPageTest extends TestCase
                 [
                     'id' => null,
                     'project_id' => $this->projectA->id,
-                    'activity' => 'Duplicate attempt',
+                    'activity' => 'Additional activity',
                     'hours' => [2, 0, 0, 0, 0, 0, 0],
                     'status' => 'draft',
                     'editable' => true,
@@ -408,9 +454,9 @@ class WeeklyHoursPageTest extends TestCase
                 ],
             ])
             ->call('save')
-            ->assertNotified('Could not save weekly hours');
+            ->assertNotified('Weekly hours saved');
 
-        $this->assertDatabaseCount('timesheets', 1);
+        $this->assertDatabaseCount('timesheets', 3);
     }
 
     private function seedWeeklyHours(): void

@@ -30,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
         return $panel
             ->default()
             ->id('admin')
-            ->path('admin')
+            ->path('')
             ->login(Login::class)
             ->profile()
             ->defaultAvatarProvider(LocalAvatarProvider::class)
@@ -56,7 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->spaUrlExceptions([
                 '/pdf/*',
                 '/weekly-hours/*',
-                '/admin/projects*',
+                '/projects*',
             ])
             ->colors([
                 'primary' => Color::hex('#1B3860'),

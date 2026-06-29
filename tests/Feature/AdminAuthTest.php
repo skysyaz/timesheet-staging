@@ -15,13 +15,20 @@ class AdminAuthTest extends TestCase
 
     public function test_guest_is_redirected_to_login(): void
     {
-        $response = $this->get('/admin');
-        $response->assertRedirect('/admin/login');
+        $response = $this->get('/');
+        $response->assertRedirect('/login');
+    }
+
+    public function test_legacy_admin_url_redirects_to_root(): void
+    {
+        $this->get('/admin')->assertRedirect('/');
+        $this->get('/admin/login')->assertRedirect('/login');
+        $this->get('/admin/weekly-hours')->assertRedirect('/weekly-hours');
     }
 
     public function test_login_page_loads(): void
     {
-        $response = $this->get('/admin/login');
+        $response = $this->get('/login');
         $response->assertStatus(200);
     }
 
@@ -39,7 +46,7 @@ class AdminAuthTest extends TestCase
                 'password' => 'password',
             ])
             ->call('authenticate')
-            ->assertRedirect('/admin');
+            ->assertRedirect('/');
 
         $this->assertAuthenticatedAs($user);
     }
@@ -49,7 +56,7 @@ class AdminAuthTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']);
         $this->actingAs($user);
 
-        $response = $this->get('/admin');
+        $response = $this->get('/');
         $response->assertStatus(200);
     }
 
@@ -58,7 +65,7 @@ class AdminAuthTest extends TestCase
         $user = User::factory()->create(['role' => 'admin']);
         $this->actingAs($user);
 
-        $response = $this->get('/admin');
+        $response = $this->get('/');
 
         $response->assertStatus(200);
         $response->assertSee('fi-sidebar-item fi-active', false);
@@ -71,7 +78,7 @@ class AdminAuthTest extends TestCase
     {
         $this->generateFaviconAssets();
 
-        $response = $this->get('/admin/login');
+        $response = $this->get('/login');
 
         $response->assertStatus(200);
         $response->assertSee('/branding/favicon-32x32.png', false);

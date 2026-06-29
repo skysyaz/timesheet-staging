@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TimesheetResource\Pages;
 
 use App\Filament\Resources\TimesheetResource;
 use App\Filament\Resources\TimesheetResource\Concerns\CanSubmitTimesheet;
+use App\Support\ProjectDisplay;
 use App\Support\TimesheetAccess;
 use Filament\Actions;
 use Filament\Forms;
@@ -67,12 +68,13 @@ class ViewTimesheet extends ViewRecord
                         TextEntry::make('user.name')
                             ->label('Employee')
                             ->visible(fn () => ! auth()->user()->isEmployee()),
-                        TextEntry::make('project.code')
-                            ->label('Project Code')
-                            ->badge()
-                            ->color('primary'),
                         TextEntry::make('project.name')
-                            ->label('Project Name'),
+                            ->label('Project')
+                            ->badge()
+                            ->color('primary')
+                            ->formatStateUsing(
+                                fn (?string $state, Model $record): string => ProjectDisplay::listLabel($record->project),
+                            ),
                         TextEntry::make('project_role')
                             ->label('Project Role')
                             ->placeholder('—'),

@@ -145,7 +145,7 @@ class WeeklyHours extends Page
             return true;
         }
 
-        return $viewer->isEmployee() && $viewer->id === $target->id;
+        return $viewer->id === $target->id;
     }
 
     public function previousWeek(): void

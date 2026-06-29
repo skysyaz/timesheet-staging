@@ -29,11 +29,7 @@ class TimesheetAccess
             return true;
         }
 
-        if ($user->isEmployee()) {
-            return $timesheet->user_id === $user->id;
-        }
-
-        return false;
+        return $timesheet->user_id === $user->id;
     }
 
     public static function userCanRevertToDraft(User $user, Timesheet $timesheet): bool
@@ -130,7 +126,8 @@ class TimesheetAccess
             return false;
         }
 
-        return $project->created_by === $user->id;
+        return self::userCanManageProject($user, $project)
+            || $project->created_by === $user->id;
     }
 
     public static function userCanManageProject(User $user, ?Project $project): bool
@@ -213,5 +210,47 @@ class TimesheetAccess
         }
 
         return $query->whereRaw('0 = 1');
+    }
+
+    /**
+     * Users an admin may assign when creating or editing a timesheet on behalf of someone else.
+     *
+     * @return array<int, string>
+     */
+    public static function assignableUserOptionsForAdmin(): array
+    {
+        return User::query()
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * Users visible in timesheet list filters for approver roles.
+     *
+     * @return array<int, string>
+     */
+    public static function userFilterOptionsForViewer(?User $viewer): array
+    {
+        if (! $viewer || $viewer->isEmployee()) {
+            return [];
+        }
+
+        if ($viewer->isAdmin()) {
+            return self::assignableUserOptionsForAdmin();
+        }
+
+        return User::query()
+            ->orderBy('name')
+            ->where(function (Builder $userQuery) use ($viewer): void {
+                $userQuery
+                    ->whereHas(
+                        'timesheets.project',
+                        fn (Builder $projectQuery) => self::scopeAssignedProjectsForUser($projectQuery, $viewer),
+                    )
+                    ->orWhere('id', $viewer->id);
+            })
+            ->pluck('name', 'id')
+            ->all();
     }
 }

@@ -40,7 +40,7 @@ class SettingsPageTest extends TestCase
         $employee = User::factory()->create(['role' => 'employee']);
 
         $this->actingAs($employee)
-            ->get('/admin/settings')
+            ->get('/settings')
             ->assertForbidden();
     }
 

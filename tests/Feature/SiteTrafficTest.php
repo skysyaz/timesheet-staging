@@ -15,7 +15,7 @@ class SiteTrafficTest extends TestCase
 
     public function test_successful_admin_page_view_is_recorded(): void
     {
-        $this->get('/admin/login')->assertOk();
+        $this->get('/login')->assertOk();
 
         $this->assertDatabaseHas('site_traffic_daily', [
             'page_views' => 1,
@@ -60,7 +60,7 @@ class SiteTrafficTest extends TestCase
 
         $this->assertFalse(SiteTrafficOverview::canView());
 
-        $this->get('/admin')
+        $this->get('/')
             ->assertOk()
             ->assertDontSee('Site Traffic Today');
     }

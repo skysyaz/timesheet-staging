@@ -18,7 +18,7 @@ trait CanSubmitTimesheet
             ->visible(fn (): bool => TimesheetResource::canUserSubmitTimesheet(auth()->user(), $this->record))
             ->requiresConfirmation()
             ->modalHeading('Submit timesheet')
-            ->modalDescription('Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.')
+            ->modalDescription(fn (): string => TimesheetResource::submitConfirmationMessage(auth()->user(), $this->record))
             ->action(function () use ($persistFormFirst): void {
                 if ($persistFormFirst) {
                     $this->form->validate();
@@ -40,7 +40,7 @@ trait CanSubmitTimesheet
 
                 Notification::make()
                     ->title('Timesheet submitted')
-                    ->body('Your timesheet has been sent for approval.')
+                    ->body(TimesheetResource::submitSuccessMessage(auth()->user(), $this->record))
                     ->success()
                     ->send();
 

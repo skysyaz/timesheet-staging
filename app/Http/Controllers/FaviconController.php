@@ -68,7 +68,7 @@ class FaviconController extends Controller
             'short_name' => 'TimeSheet',
             'icons' => $icons,
             'display' => 'standalone',
-            'start_url' => '/admin',
+            'start_url' => '/',
         ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
 
         return response($body, 200, [

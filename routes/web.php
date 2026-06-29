@@ -5,7 +5,11 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\UptimeHeartbeatController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/admin/login');
+Route::permanentRedirect('/admin/login', '/login');
+Route::permanentRedirect('/admin', '/');
+Route::get('/admin/{path}', function (string $path) {
+    return redirect('/'.ltrim($path, '/'), 301);
+})->where('path', '.*');
 
 Route::get('/favicon.ico', [FaviconController::class, 'legacyIco']);
 Route::get('/apple-touch-icon.png', [FaviconController::class, 'legacyAppleTouch']);

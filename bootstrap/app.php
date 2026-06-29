@@ -28,7 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->redirectGuestsTo('/admin/login');
+        $middleware->redirectGuestsTo('/login');
         $middleware->append(SecurityHeaders::class);
         $middleware->web(append: [
             AttachFlareContext::class,

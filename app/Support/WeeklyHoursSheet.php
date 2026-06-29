@@ -209,7 +209,6 @@ class WeeklyHoursSheet
     private function validateRows(array $rows, User $actor): void
     {
         $errors = [];
-        $projectIds = [];
 
         foreach ($rows as $index => $row) {
             if ($this->rowIsBlank($row)) {
@@ -222,31 +221,6 @@ class WeeklyHoursSheet
                 }
 
                 continue;
-            }
-
-            if (in_array($row['project_id'], $projectIds, true)) {
-                $errors["rows.{$index}.project_id"] = 'Each project can only appear once in the same week.';
-            }
-
-            $projectIds[] = $row['project_id'];
-
-            $conflictingTimesheet = Timesheet::query()
-                ->where('user_id', $this->user->id)
-                ->where('project_id', $row['project_id'])
-                ->whereDate('week_start', $this->weekStart->toDateString())
-                ->when($row['id'], fn ($query) => $query->where('id', '!=', $row['id']))
-                ->first();
-
-            if ($conflictingTimesheet && $row['id'] !== $conflictingTimesheet->id) {
-                $canUpsertExisting = ! $row['id']
-                    && $conflictingTimesheet->isEditable()
-                    && TimesheetAccess::userCanEditTimesheet($actor, $conflictingTimesheet);
-
-                if (! $canUpsertExisting) {
-                    $errors["rows.{$index}.project_id"] = 'A timesheet row for this project already exists in this week.';
-
-                    continue;
-                }
             }
 
             if (! $row['editable']) {
@@ -304,22 +278,6 @@ class WeeklyHoursSheet
             ]);
 
             return $timesheet->fresh();
-        }
-
-        $existing = Timesheet::query()
-            ->where('user_id', $this->user->id)
-            ->where('project_id', $row['project_id'])
-            ->whereDate('week_start', $this->weekStart->toDateString())
-            ->first();
-
-        if ($existing) {
-            $existing->update([
-                'project_role' => $this->resolveProjectRole($existing, $row['project_id']),
-                'hours' => $row['hours'],
-                'tasks' => $this->tasksFromActivity($row['activity'], $row['hours'], $existing->tasks),
-            ]);
-
-            return $existing->fresh();
         }
 
         return Timesheet::query()->create([
@@ -465,6 +423,15 @@ class WeeklyHoursSheet
             ->whereKey($projectId)
             ->value('project_user.assigned_role');
 
-        return filled($assignedRole) ? (string) $assignedRole : null;
+        if (filled($assignedRole)) {
+            return (string) $assignedRole;
+        }
+
+        return match ($this->user->role) {
+            'project_manager' => 'Project Manager',
+            'project_director' => 'Project Director',
+            'admin' => 'Administrator',
+            default => null,
+        };
     }
 }

@@ -172,4 +172,4 @@ REMOTE
 
 echo ""
 echo "Setup complete. Deploy code with: SSHPASS='...' ./scripts/deploy-staging-vps.sh"
-echo "Staging URL: http://${STAGING_IP}/admin/login"
+echo "Staging URL: http://${STAGING_IP}/login"

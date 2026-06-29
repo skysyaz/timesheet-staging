@@ -43,6 +43,6 @@ class PdfSummaryExportTest extends TestCase
 
     public function test_summary_pdf_requires_authentication(): void
     {
-        $this->get('/pdf/summary')->assertRedirect('/admin/login');
+        $this->get('/pdf/summary')->assertRedirect('/login');
     }
 }
