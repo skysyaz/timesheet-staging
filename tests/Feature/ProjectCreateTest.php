@@ -59,6 +59,41 @@ class ProjectCreateTest extends TestCase
         $this->assertSame('Designer', $project->members()->whereKey($memberOne->id)->first()?->pivot?->assigned_role);
     }
 
+    public function test_program_manager_can_create_project_with_timeline_and_members(): void
+    {
+        $pm = User::factory()->projectManager()->create();
+        $programManager = User::factory()->programManager()->create();
+        $memberOne = User::factory()->create(['name' => 'Ainie Idris']);
+        $memberTwo = User::factory()->create(['name' => 'Team Member']);
+
+        $this->actingAs($programManager);
+
+        Livewire::test(\App\Filament\Resources\ProjectResource\Pages\CreateProject::class)
+            ->fillForm([
+                'code' => 'PGM01',
+                'name' => 'Program Manager Project',
+                'status' => 'active',
+                'start_date' => '2026-06-22',
+                'end_date' => '2026-06-28',
+                'project_manager_id' => $pm->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
+                'member_assignments' => [
+                    ['user_id' => $memberOne->id, 'assigned_role' => 'Designer'],
+                    ['user_id' => $memberTwo->id, 'assigned_role' => 'Developer'],
+                ],
+            ])
+            ->call('create')
+            ->assertHasNoErrors()
+            ->assertRedirect();
+
+        $project = Project::query()->where('code', 'PGM01')->firstOrFail();
+
+        $this->assertCount(2, $project->members);
+        $this->assertTrue($project->hasMember($memberOne));
+        $this->assertTrue($project->hasMember($memberTwo));
+    }
+
     public function test_end_date_must_be_on_or_after_start_date(): void
     {
         $pm = User::factory()->projectManager()->create();

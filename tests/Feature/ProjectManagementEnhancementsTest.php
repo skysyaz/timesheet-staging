@@ -21,6 +21,8 @@ class ProjectManagementEnhancementsTest extends TestCase
         Carbon::setTestNow(Carbon::parse('2026-06-24 09:00:00'));
 
         $employee = User::factory()->create(['role' => 'employee', 'name' => 'Ainie Idris']);
+        $projectManager = User::factory()->projectManager()->create(['name' => 'Sam Project Manager']);
+        $programManager = User::factory()->programManager()->create(['name' => 'Dana Program Manager']);
         $project = Project::create([
             'code' => 'WEB-01',
             'name' => 'Website Redesign',
@@ -28,6 +30,8 @@ class ProjectManagementEnhancementsTest extends TestCase
             'start_date' => '2026-06-01',
             'end_date' => '2026-06-30',
             'status' => 'active',
+            'project_manager_id' => $projectManager->id,
+            'program_manager_id' => $programManager->id,
         ]);
         $project->members()->attach($employee->id, ['assigned_role' => 'Designer']);
 
@@ -44,9 +48,29 @@ class ProjectManagementEnhancementsTest extends TestCase
             ->test(MyProjects::class)
             ->assertSee('Website Redesign')
             ->assertSee('Designer')
+            ->assertSee('Sam Project Manager')
+            ->assertSee('Dana Program Manager')
+            ->assertSee('Project Manager')
+            ->assertSee('Program Manager')
             ->assertSee('24.0h');
 
         Carbon::setTestNow();
+    }
+
+    public function test_employee_sees_not_assigned_when_project_has_no_approvers(): void
+    {
+        $employee = User::factory()->create(['role' => 'employee']);
+        $project = Project::create([
+            'code' => 'NO-PM',
+            'name' => 'Unassigned Approvers',
+            'status' => 'active',
+        ]);
+        $project->members()->attach($employee->id, ['assigned_role' => 'Developer']);
+
+        Livewire::actingAs($employee)
+            ->test(MyProjects::class)
+            ->assertSee('Unassigned Approvers')
+            ->assertSee('Not assigned');
     }
 
     public function test_reports_can_group_by_member(): void

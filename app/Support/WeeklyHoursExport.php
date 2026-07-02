@@ -8,6 +8,9 @@ use Illuminate\Http\Request;
 
 class WeeklyHoursExport
 {
+    /** @var list<array<string, mixed>>|null */
+    private ?array $rows = null;
+
     public function __construct(
         public User $user,
         public Carbon $weekStart,
@@ -43,13 +46,25 @@ class WeeklyHoursExport
      *     project_name: string,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }>
      */
     public function rows(): array
     {
-        return $this->sheet()->loadExportRows();
+        return $this->rows ??= $this->sheet()->loadExportRows();
+    }
+
+    public function hasOvertime(): bool
+    {
+        foreach ($this->rows() as $row) {
+            if (WeeklyHoursFormatter::rowTotal($row['overtime_hours'] ?? []) > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -82,9 +97,27 @@ class WeeklyHoursExport
         );
     }
 
+    /**
+     * @return list<string>
+     */
+    public function columnOvertimeTotals(): array
+    {
+        return array_map(
+            fn (float $total): string => WeeklyHoursFormatter::display($total),
+            WeeklyHoursFormatter::columnTotals($this->rows(), 'overtime_hours'),
+        );
+    }
+
     public function grandTotal(): string
     {
         $total = array_sum(WeeklyHoursFormatter::columnTotals($this->rows()));
+
+        return WeeklyHoursFormatter::display($total);
+    }
+
+    public function grandOvertimeTotal(): string
+    {
+        $total = array_sum(WeeklyHoursFormatter::columnTotals($this->rows(), 'overtime_hours'));
 
         return WeeklyHoursFormatter::display($total);
     }
@@ -97,6 +130,11 @@ class WeeklyHoursExport
     public function rowDuration(array $row): string
     {
         return WeeklyHoursFormatter::display(WeeklyHoursFormatter::rowTotal($row['hours'] ?? []));
+    }
+
+    public function rowOvertimeDuration(array $row): string
+    {
+        return WeeklyHoursFormatter::display(WeeklyHoursFormatter::rowTotal($row['overtime_hours'] ?? []));
     }
 
     public function filename(): string

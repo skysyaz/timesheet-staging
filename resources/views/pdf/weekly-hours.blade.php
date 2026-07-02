@@ -21,6 +21,10 @@
         table.grid th.text-left { text-align: left; padding-left: 6pt; }
         table.grid td.weekend, table.grid th.weekend { background: #fff3cd; }
         table.grid tfoot td { font-weight: bold; background: #f3f4f6; }
+        table.grid tr.overtime td { background: #fffbeb; font-size: 7.5pt; }
+        table.grid tr.overtime td.weekend { background: #fdf0c9; }
+        table.grid tr.overtime td.ot-label { font-style: italic; font-weight: bold; color: #92400e; text-transform: uppercase; font-size: 6.5pt; letter-spacing: 0.5pt; }
+        table.grid tfoot tr.overtime-total td { background: #fdf0c9; color: #92400e; }
         .empty { padding: 16pt; text-align: center; font-style: italic; }
     </style>
 </head>
@@ -74,16 +78,34 @@
                     @endforeach
                     <td>{{ $export->rowDuration($row) }}</td>
                 </tr>
+                @if ($export->hasOvertime())
+                    <tr class="overtime">
+                        <td class="text-left ot-label" colspan="2">Overtime</td>
+                        @foreach (range(0, 6) as $dayIndex)
+                            <td @class(['weekend' => $dayIndex >= 5])>{{ $export->formatHours($row['overtime_hours'][$dayIndex] ?? 0) }}</td>
+                        @endforeach
+                        <td>{{ $export->rowOvertimeDuration($row) }}</td>
+                    </tr>
+                @endif
             @endforeach
         </tbody>
         <tfoot>
             <tr>
-                <td class="text-left" colspan="2">Total</td>
+                <td class="text-left" colspan="2">{{ $export->hasOvertime() ? 'Regular Total' : 'Total' }}</td>
                 @foreach ($export->columnTotals() as $index => $total)
                     <td @class(['weekend' => $index >= 5])>{{ $total }}</td>
                 @endforeach
                 <td>{{ $export->grandTotal() }}</td>
             </tr>
+            @if ($export->hasOvertime())
+                <tr class="overtime-total">
+                    <td class="text-left" colspan="2">Weekly Overtime Total</td>
+                    @foreach ($export->columnOvertimeTotals() as $index => $total)
+                        <td>{{ $total }}</td>
+                    @endforeach
+                    <td>{{ $export->grandOvertimeTotal() }}</td>
+                </tr>
+            @endif
         </tfoot>
     </table>
 @endif

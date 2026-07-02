@@ -131,7 +131,7 @@ class ProjectResource extends Resource
                                         return User::query()
                                             ->when(
                                                 auth()->user() && ! auth()->user()->isAdmin(),
-                                                fn (Builder $query) => UserAccess::scopeVisibleUsers($query, auth()->user()),
+                                                fn (Builder $query) => UserAccess::scopeAssignableProjectMembers($query, auth()->user()),
                                             )
                                             ->where('role', '!=', 'admin')
                                             ->when(

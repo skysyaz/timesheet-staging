@@ -39,6 +39,28 @@ class UserAccess
     return $query->whereRaw('0 = 1');
   }
 
+  /**
+   * Who an actor may pick from when assigning team members to a project.
+   *
+   * This is deliberately separate from {@see scopeVisibleUsers()}, which
+   * governs the Administration -> Users resource. Project Managers and
+   * Program Managers cannot manage users there, but they can create and
+   * edit their own projects and must be able to see the employee directory
+   * to staff them.
+   */
+  public static function scopeAssignableProjectMembers(Builder $query, ?User $actor): Builder
+  {
+    if (! $actor) {
+      return $query->whereRaw('0 = 1');
+    }
+
+    if ($actor->isAdmin() || $actor->isProjectAdmin() || $actor->isProjectManager() || $actor->isProgramManager()) {
+      return $query;
+    }
+
+    return $query->whereRaw('0 = 1');
+  }
+
   public static function canViewUser(User $actor, User $target): bool
   {
     if ($actor->isAdmin()) {

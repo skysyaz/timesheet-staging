@@ -1033,6 +1033,54 @@
     @apply text-gray-300;
 }
 
+.corp-my-projects-approvers {
+    @apply mt-4 grid gap-3 sm:grid-cols-2;
+}
+
+.corp-my-projects-approver {
+    @apply flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50/80 px-4 py-3;
+}
+
+.dark .corp-my-projects-approver {
+    @apply border-gray-700 bg-gray-800/60;
+}
+
+.corp-my-projects-approver-badge {
+    @apply inline-flex w-fit rounded-full px-2.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide;
+}
+
+.corp-my-projects-approver-badge-pm {
+    @apply bg-amber-100 text-amber-900;
+}
+
+.dark .corp-my-projects-approver-badge-pm {
+    @apply bg-amber-950/50 text-amber-200;
+}
+
+.corp-my-projects-approver-badge-pgm {
+    @apply bg-violet-100 text-violet-900;
+}
+
+.dark .corp-my-projects-approver-badge-pgm {
+    @apply bg-violet-950/50 text-violet-200;
+}
+
+.corp-my-projects-approver-name {
+    @apply text-sm font-semibold text-gray-900;
+}
+
+.corp-my-projects-approver-name.is-unassigned {
+    @apply font-medium italic text-gray-400;
+}
+
+.dark .corp-my-projects-approver-name {
+    @apply text-gray-100;
+}
+
+.dark .corp-my-projects-approver-name.is-unassigned {
+    @apply text-gray-500;
+}
+
 .corp-my-projects-metrics {
     @apply mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
 }

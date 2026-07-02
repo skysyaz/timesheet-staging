@@ -519,6 +519,82 @@ class WeeklyHoursPageTest extends TestCase
         $this->assertSame('3:00', $component->instance()->grandOvertimeTotal());
     }
 
+    public function test_print_view_includes_overtime_rows_and_totals(): void
+    {
+        $this->seedWeeklyHoursWithOvertime();
+
+        $response = $this->actingAs($this->employee)
+            ->get(route('weekly-hours.print', [
+                'user' => $this->employee->id,
+                'weekStart' => $this->monday->toDateString(),
+            ]));
+
+        $response->assertOk()
+            ->assertSee('Overtime', false)
+            ->assertSee('Weekly Overtime Total', false)
+            ->assertSee('Regular Total', false)
+            // Per-day overtime values: 2h Mon + 1.5h Wed on Alpha
+            ->assertSee('2:00', false)
+            ->assertSee('1:30', false)
+            // Weekly overtime grand total (2 + 1.5 = 3.5h) matching the on-screen total
+            ->assertSee('3:30', false);
+    }
+
+    public function test_print_view_without_overtime_omits_overtime_section(): void
+    {
+        $this->seedWeeklyHours();
+
+        $this->actingAs($this->employee)
+            ->get(route('weekly-hours.print', [
+                'user' => $this->employee->id,
+                'weekStart' => $this->monday->toDateString(),
+            ]))
+            ->assertOk()
+            ->assertSee('Total', false)
+            ->assertDontSee('Weekly Overtime Total', false)
+            ->assertDontSee('Regular Total', false);
+    }
+
+    public function test_pdf_download_succeeds_for_week_with_overtime(): void
+    {
+        $this->seedWeeklyHoursWithOvertime();
+
+        $this->actingAs($this->employee)
+            ->get(route('pdf.weekly-hours', [
+                'user' => $this->employee->id,
+                'weekStart' => $this->monday->toDateString(),
+            ]))
+            ->assertOk()
+            ->assertHeader('content-type', 'application/pdf');
+    }
+
+    public function test_export_overtime_totals_match_sheet_data(): void
+    {
+        $this->seedWeeklyHoursWithOvertime();
+
+        $this->actingAs($this->employee);
+        $export = \App\Support\WeeklyHoursExport::for($this->employee, $this->monday, $this->employee);
+
+        $this->assertTrue($export->hasOvertime());
+        $this->assertSame('3:30', $export->grandOvertimeTotal());
+        $this->assertSame(['2:00', '0:00', '1:30', '0:00', '0:00', '0:00', '0:00'], $export->columnOvertimeTotals());
+        $this->assertSame('40:00', $export->grandTotal());
+    }
+
+    private function seedWeeklyHoursWithOvertime(): void
+    {
+        Timesheet::create([
+            'user_id' => $this->employee->id,
+            'project_id' => $this->projectA->id,
+            'project_role' => 'Developer',
+            'week_start' => $this->monday->toDateString(),
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [2, 0, 1.5, 0, 0, 0, 0],
+            'tasks' => ['Development', 'Development', 'Development', 'Development', 'Development', '', ''],
+            'status' => 'draft',
+        ]);
+    }
+
     private function seedWeeklyHours(): void
     {
         Timesheet::create([

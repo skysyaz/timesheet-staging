@@ -52,7 +52,7 @@ class MyProjects extends Page
 
         return $user->projects()
             ->where('status', 'active')
-            ->with(['members'])
+            ->with(['members', 'projectManager', 'programManager'])
             ->orderBy('end_date')
             ->get()
             ->map(function (Project $project) use ($user): array {

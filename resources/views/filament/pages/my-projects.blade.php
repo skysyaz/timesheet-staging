@@ -21,6 +21,27 @@
                     <p class="corp-my-projects-description">{{ $project->description }}</p>
                 @endif
 
+                <div class="corp-my-projects-approvers" aria-label="Project approval contacts">
+                    <div class="corp-my-projects-approver">
+                        <span class="corp-my-projects-approver-badge corp-my-projects-approver-badge-pm">Project Manager</span>
+                        <span @class([
+                            'corp-my-projects-approver-name',
+                            'is-unassigned' => blank($project->projectManager?->name),
+                        ])>
+                            {{ $project->projectManager?->name ?? 'Not assigned' }}
+                        </span>
+                    </div>
+                    <div class="corp-my-projects-approver">
+                        <span class="corp-my-projects-approver-badge corp-my-projects-approver-badge-pgm">Program Manager</span>
+                        <span @class([
+                            'corp-my-projects-approver-name',
+                            'is-unassigned' => blank($project->programManager?->name),
+                        ])>
+                            {{ $project->programManager?->name ?? 'Not assigned' }}
+                        </span>
+                    </div>
+                </div>
+
                 <div class="corp-my-projects-metrics">
                     <div>
                         <span class="corp-my-projects-metric-label">Start</span>

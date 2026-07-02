@@ -5,6 +5,7 @@
             <div class="flex flex-col items-center justify-center gap-1.5 py-1 text-center">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Entries</p>
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">{{ $this->getReportCount() }}</p>
+                <p class="invisible text-xs" aria-hidden="true">&nbsp;</p>
             </div>
         </div>
         <div class="corp-stat-card" style="border-bottom-color: rgb(4 120 87);">
@@ -13,7 +14,7 @@
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
                     {{ number_format($this->getTotalHours(), 1) }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
                 </p>
-                <p class="text-xs text-slate-400">
+                <p class="text-xs tabular-nums text-slate-400">
                     Reg {{ number_format($this->getTotalRegularHours(), 1) }} · OT {{ number_format($this->getTotalOvertimeHours(), 1) }}
                 </p>
             </div>
@@ -24,14 +25,16 @@
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
                     {{ number_format($this->getTotalWeightedHours(), 1) }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
                 </p>
+                <p class="invisible text-xs" aria-hidden="true">&nbsp;</p>
             </div>
         </div>
         <div class="corp-stat-card" style="border-bottom-color: rgb(124 58 237);">
             <div class="flex flex-col items-center justify-center gap-1.5 py-1 text-center">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Average</p>
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
-                    {{ $this->getReportCount() > 0 ? number_format($this->getTotalHours() / $this->getReportCount(), 1) : '0' }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
+                    {{ number_format($this->getReportCount() > 0 ? $this->getTotalHours() / $this->getReportCount() : 0, 1) }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
                 </p>
+                <p class="invisible text-xs" aria-hidden="true">&nbsp;</p>
             </div>
         </div>
     </div>
@@ -102,7 +105,7 @@
                 <table class="corp-reports-table w-full text-left text-sm">
                     <thead>
                         <tr class="bg-gray-50 dark:bg-gray-900/80">
-                            <th class="px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                            <th class="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                 {{ match($reportType) {
                                     'member' => 'Member',
                                     'week' => 'Week',
@@ -110,25 +113,25 @@
                                     default => 'Project',
                                 } }}
                             </th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Regular</th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">OT</th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Weighted</th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Share</th>
-                            <th class="min-w-[10rem] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Distribution</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Regular</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">OT</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Weighted</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Share</th>
+                            <th class="min-w-[10rem] px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Distribution</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($data as $row)
                             @php $pct = $total > 0 ? ($row['hours'] / $total * 100) : 0; @endphp
                             <tr>
-                                <td class="max-w-xs truncate px-5 py-4 font-medium text-gray-900 dark:text-white" title="{{ $row['label'] }}">{{ $row['label'] }}</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['regular_hours'], 1) }}h</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['overtime_hours'], 1) }}h</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['hours'], 1) }}h</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['weighted_hours'], 1) }}h</td>
-                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-500 dark:text-gray-400">{{ number_format($pct, 1) }}%</td>
-                                <td class="px-5 py-4">
+                                <td class="max-w-xs truncate px-5 py-4 text-left font-medium text-gray-900 dark:text-white" title="{{ $row['label'] }}">{{ $row['label'] }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['regular_hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['overtime_hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-right tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['weighted_hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 text-right tabular-nums text-gray-500 dark:text-gray-400">{{ number_format($pct, 1) }}%</td>
+                                <td class="px-5 py-4 text-left">
                                     <div class="corp-progress-track">
                                         <div class="corp-progress-fill" style="width: {{ min($pct, 100) }}%"></div>
                                     </div>
@@ -138,12 +141,12 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/50">
-                            <td class="px-5 py-3.5 font-semibold text-gray-900 dark:text-white">Total</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalRegularHours(), 1) }}h</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalOvertimeHours(), 1) }}h</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($total, 1) }}h</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalWeightedHours(), 1) }}h</td>
-                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold text-gray-500">100%</td>
+                            <td class="px-5 py-3.5 text-left font-semibold text-gray-900 dark:text-white">Total</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalRegularHours(), 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalOvertimeHours(), 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($total, 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalWeightedHours(), 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 text-right font-semibold text-gray-500">100%</td>
                             <td></td>
                         </tr>
                     </tfoot>
