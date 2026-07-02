@@ -18,6 +18,21 @@ class SiteTrafficTest extends TestCase
         $this->get('/login')->assertOk();
 
         $this->assertDatabaseHas('site_traffic_daily', [
+            'date' => now()->toDateString(),
+            'page_views' => 1,
+            'unique_sessions' => 1,
+        ]);
+    }
+
+    public function test_authenticated_dashboard_view_is_recorded_at_root_path(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $this->get('/')->assertOk();
+
+        $this->assertDatabaseHas('site_traffic_daily', [
+            'date' => now()->toDateString(),
             'page_views' => 1,
             'unique_sessions' => 1,
         ]);

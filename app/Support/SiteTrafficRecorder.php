@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SiteTrafficDaily;
+use Filament\Facades\Filament;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -91,6 +92,12 @@ class SiteTrafficRecorder
             return false;
         }
 
-        return $request->is('admin', 'admin/*');
+        $panelPath = trim(Filament::getDefaultPanel()->getPath(), '/');
+
+        if ($panelPath === '') {
+            return true;
+        }
+
+        return $request->is($panelPath, $panelPath . '/*');
     }
 }
