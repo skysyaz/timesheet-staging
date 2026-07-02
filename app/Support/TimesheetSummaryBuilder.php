@@ -211,7 +211,7 @@ class TimesheetSummaryBuilder
 
         foreach ($timesheets as $timesheet) {
             $key = $timesheet->user?->name ?? 'Unknown';
-            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
+            $results[$key] = $this->accumulateTimesheet($results[$key] ?? [], $timesheet);
         }
 
         uasort($results, fn (array $a, array $b): int => ($b['hours'] ?? 0) <=> ($a['hours'] ?? 0));
@@ -233,7 +233,7 @@ class TimesheetSummaryBuilder
 
         foreach ($timesheets as $timesheet) {
             $key = ProjectDisplay::listLabel($timesheet->project);
-            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
+            $results[$key] = $this->accumulateTimesheet($results[$key] ?? [], $timesheet);
         }
 
         uasort($results, fn (array $a, array $b): int => ($b['hours'] ?? 0) <=> ($a['hours'] ?? 0));
@@ -259,7 +259,7 @@ class TimesheetSummaryBuilder
                 : Carbon::parse($timesheet->week_start);
             $weekEnd = $weekStart->copy()->addDays(6)->format('d/m/Y');
             $key = $weekStart->format('Y-\WW') . ' (ending ' . $weekEnd . ')';
-            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
+            $results[$key] = $this->accumulateTimesheet($results[$key] ?? [], $timesheet);
         }
 
         ksort($results);
@@ -284,7 +284,7 @@ class TimesheetSummaryBuilder
                 ? $timesheet->week_start
                 : Carbon::parse($timesheet->week_start);
             $key = $weekStart->format('M Y');
-            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
+            $results[$key] = $this->accumulateTimesheet($results[$key] ?? [], $timesheet);
         }
 
         ksort($results);
@@ -298,13 +298,16 @@ class TimesheetSummaryBuilder
 
     /**
      * @param  array<string, float>  $bucket
+     * @return array<string, float>
      */
-    private function accumulateTimesheet(array &$bucket, Timesheet $timesheet): void
+    private function accumulateTimesheet(array $bucket, Timesheet $timesheet): array
     {
         $bucket['regular_hours'] = ($bucket['regular_hours'] ?? 0) + $timesheet->totalRegularHours();
         $bucket['overtime_hours'] = ($bucket['overtime_hours'] ?? 0) + $timesheet->totalOvertimeHours();
         $bucket['hours'] = ($bucket['hours'] ?? 0) + $timesheet->totalHours();
         $bucket['weighted_hours'] = ($bucket['weighted_hours'] ?? 0) + $timesheet->weightedHours();
+
+        return $bucket;
     }
 
     /**

@@ -134,4 +134,30 @@ class TimesheetSummaryBuilderTest extends TestCase
         $this->assertSame('Assigned', $data[0]['label']);
         $this->assertSame(40.0, $data[0]['hours']);
     }
+
+    public function test_grouped_data_includes_regular_overtime_and_weighted_hours(): void
+    {
+        $employee = User::factory()->create(['role' => 'employee']);
+        $project = Project::create(['code' => 'A', 'name' => 'Alpha']);
+        $monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
+
+        Timesheet::create([
+            'user_id' => $employee->id,
+            'project_id' => $project->id,
+            'week_start' => $monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [2, 0, 0, 0, 0, 0, 0],
+            'status' => 'approved',
+        ]);
+
+        $this->actingAs($employee);
+
+        $data = (new TimesheetSummaryBuilder())->groupedData();
+
+        $this->assertCount(1, $data);
+        $this->assertSame(40.0, $data[0]['regular_hours']);
+        $this->assertSame(2.0, $data[0]['overtime_hours']);
+        $this->assertSame(42.0, $data[0]['hours']);
+        $this->assertSame(42.0, $data[0]['weighted_hours']);
+    }
 }

@@ -116,20 +116,38 @@ class ProjectResource extends Resource
                             ->schema([
                                 Forms\Components\Select::make('user_id')
                                     ->label('Member')
-                                    ->options(fn (): array => User::query()
-                                        ->when(
-                                            auth()->user() && ! auth()->user()->isAdmin(),
-                                            fn (Builder $query) => UserAccess::scopeVisibleUsers($query, auth()->user()),
-                                        )
-                                        ->where('role', '!=', 'admin')
-                                        ->orderBy('name')
-                                        ->get()
-                                        ->mapWithKeys(fn (User $user): array => [
-                                            $user->id => "{$user->name} ({$user->email})",
-                                        ])
-                                        ->all())
+                                    ->options(function (Get $get): array {
+                                        $assignments = $get('member_assignments') ?? [];
+                                        $currentUserId = filled($get('user_id')) ? (int) $get('user_id') : null;
+
+                                        $assignedElsewhere = collect($assignments)
+                                            ->pluck('user_id')
+                                            ->filter()
+                                            ->map(fn ($id) => (int) $id)
+                                            ->reject(fn (int $id) => $currentUserId !== null && $id === $currentUserId)
+                                            ->values()
+                                            ->all();
+
+                                        return User::query()
+                                            ->when(
+                                                auth()->user() && ! auth()->user()->isAdmin(),
+                                                fn (Builder $query) => UserAccess::scopeVisibleUsers($query, auth()->user()),
+                                            )
+                                            ->where('role', '!=', 'admin')
+                                            ->when(
+                                                $assignedElsewhere !== [],
+                                                fn (Builder $query) => $query->whereNotIn('id', $assignedElsewhere),
+                                            )
+                                            ->orderBy('name')
+                                            ->get()
+                                            ->mapWithKeys(fn (User $user): array => [
+                                                $user->id => "{$user->name} ({$user->email})",
+                                            ])
+                                            ->all();
+                                    })
                                     ->required()
                                     ->searchable()
+                                    ->live()
                                     ->distinct(),
                                 Forms\Components\TextInput::make('assigned_role')
                                     ->label('Role')
