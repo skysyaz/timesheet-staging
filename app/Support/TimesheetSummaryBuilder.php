@@ -8,6 +8,7 @@ use App\Support\ProjectDisplay;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class TimesheetSummaryBuilder
 {
@@ -116,7 +117,7 @@ class TimesheetSummaryBuilder
     }
 
     /**
-     * @return array<int, array{label: string, hours: float|int}>
+     * @return array<int, array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}>
      */
     public function groupedData(): array
     {
@@ -133,6 +134,21 @@ class TimesheetSummaryBuilder
     public function totalHours(): float
     {
         return array_sum(array_column($this->groupedData(), 'hours'));
+    }
+
+    public function totalRegularHours(): float
+    {
+        return array_sum(array_column($this->groupedData(), 'regular_hours'));
+    }
+
+    public function totalOvertimeHours(): float
+    {
+        return array_sum(array_column($this->groupedData(), 'overtime_hours'));
+    }
+
+    public function totalWeightedHours(): float
+    {
+        return array_sum(array_column($this->groupedData(), 'weighted_hours'));
     }
 
     public function resolvedProject(): ?Project
@@ -186,54 +202,54 @@ class TimesheetSummaryBuilder
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Timesheet>  $timesheets
-     * @return array<int, array{label: string, hours: float|int}>
+     * @param  Collection<int, Timesheet>  $timesheets
+     * @return array<int, array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}>
      */
-    private function groupByMember($timesheets): array
+    private function groupByMember(Collection $timesheets): array
     {
         $results = [];
 
         foreach ($timesheets as $timesheet) {
             $key = $timesheet->user?->name ?? 'Unknown';
-            $results[$key] = ($results[$key] ?? 0) + $timesheet->totalHours();
+            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
         }
 
-        arsort($results);
+        uasort($results, fn (array $a, array $b): int => ($b['hours'] ?? 0) <=> ($a['hours'] ?? 0));
 
         return array_values(array_map(
-            fn ($hours, $label) => ['label' => $label, 'hours' => $hours],
+            fn (array $bucket, string $label) => $this->formatGroupedRow($label, $bucket),
             $results,
             array_keys($results),
         ));
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Timesheet>  $timesheets
-     * @return array<int, array{label: string, hours: float|int}>
+     * @param  Collection<int, Timesheet>  $timesheets
+     * @return array<int, array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}>
      */
-    private function groupByProject($timesheets): array
+    private function groupByProject(Collection $timesheets): array
     {
         $results = [];
 
         foreach ($timesheets as $timesheet) {
             $key = ProjectDisplay::listLabel($timesheet->project);
-            $results[$key] = ($results[$key] ?? 0) + $timesheet->totalHours();
+            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
         }
 
-        arsort($results);
+        uasort($results, fn (array $a, array $b): int => ($b['hours'] ?? 0) <=> ($a['hours'] ?? 0));
 
         return array_values(array_map(
-            fn ($hours, $label) => ['label' => $label, 'hours' => $hours],
+            fn (array $bucket, string $label) => $this->formatGroupedRow($label, $bucket),
             $results,
             array_keys($results),
         ));
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Timesheet>  $timesheets
-     * @return array<int, array{label: string, hours: float|int}>
+     * @param  Collection<int, Timesheet>  $timesheets
+     * @return array<int, array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}>
      */
-    private function groupByWeek($timesheets): array
+    private function groupByWeek(Collection $timesheets): array
     {
         $results = [];
 
@@ -243,23 +259,23 @@ class TimesheetSummaryBuilder
                 : Carbon::parse($timesheet->week_start);
             $weekEnd = $weekStart->copy()->addDays(6)->format('d/m/Y');
             $key = $weekStart->format('Y-\WW') . ' (ending ' . $weekEnd . ')';
-            $results[$key] = ($results[$key] ?? 0) + $timesheet->totalHours();
+            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
         }
 
         ksort($results);
 
         return array_values(array_map(
-            fn ($hours, $label) => ['label' => $label, 'hours' => $hours],
+            fn (array $bucket, string $label) => $this->formatGroupedRow($label, $bucket),
             $results,
             array_keys($results),
         ));
     }
 
     /**
-     * @param  \Illuminate\Support\Collection<int, Timesheet>  $timesheets
-     * @return array<int, array{label: string, hours: float|int}>
+     * @param  Collection<int, Timesheet>  $timesheets
+     * @return array<int, array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}>
      */
-    private function groupByMonth($timesheets): array
+    private function groupByMonth(Collection $timesheets): array
     {
         $results = [];
 
@@ -268,16 +284,42 @@ class TimesheetSummaryBuilder
                 ? $timesheet->week_start
                 : Carbon::parse($timesheet->week_start);
             $key = $weekStart->format('M Y');
-            $results[$key] = ($results[$key] ?? 0) + $timesheet->totalHours();
+            $this->accumulateTimesheet($results[$key] ??= [], $timesheet);
         }
 
         ksort($results);
 
         return array_values(array_map(
-            fn ($hours, $label) => ['label' => $label, 'hours' => $hours],
+            fn (array $bucket, string $label) => $this->formatGroupedRow($label, $bucket),
             $results,
             array_keys($results),
         ));
+    }
+
+    /**
+     * @param  array<string, float>  $bucket
+     */
+    private function accumulateTimesheet(array &$bucket, Timesheet $timesheet): void
+    {
+        $bucket['regular_hours'] = ($bucket['regular_hours'] ?? 0) + $timesheet->totalRegularHours();
+        $bucket['overtime_hours'] = ($bucket['overtime_hours'] ?? 0) + $timesheet->totalOvertimeHours();
+        $bucket['hours'] = ($bucket['hours'] ?? 0) + $timesheet->totalHours();
+        $bucket['weighted_hours'] = ($bucket['weighted_hours'] ?? 0) + $timesheet->weightedHours();
+    }
+
+    /**
+     * @param  array<string, float>  $bucket
+     * @return array{label: string, regular_hours: float, overtime_hours: float, hours: float, weighted_hours: float}
+     */
+    private function formatGroupedRow(string $label, array $bucket): array
+    {
+        return [
+            'label' => $label,
+            'regular_hours' => round($bucket['regular_hours'] ?? 0, 1),
+            'overtime_hours' => round($bucket['overtime_hours'] ?? 0, 1),
+            'hours' => round($bucket['hours'] ?? 0, 1),
+            'weighted_hours' => round($bucket['weighted_hours'] ?? 0, 1),
+        ];
     }
 
     private static function filterStringValue(?array $filters, string $key): ?string

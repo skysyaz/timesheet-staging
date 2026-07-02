@@ -88,7 +88,7 @@ class ViewTimesheet extends ViewRecord
                             ->badge()
                             ->color(fn (string $state) => match ($state) {
                                 'approved' => 'success',
-                                'pending_pd', 'pending_pm' => 'warning',
+                                'pending_program_manager', 'pending_pm' => 'warning',
                                 'rejected' => 'danger',
                                 default => 'gray',
                             })
@@ -100,6 +100,18 @@ class ViewTimesheet extends ViewRecord
                     ->schema([
                         ViewEntry::make('hours_grid')
                             ->view('filament.infolists.daily-hours-grid'),
+                        ViewEntry::make('overtime_hours_grid')
+                            ->view('filament.infolists.daily-overtime-hours-grid')
+                            ->visible(fn (Model $record) => collect($record->overtime_hours ?? [])->contains(fn ($hours) => (float) $hours > 0)),
+                        TextEntry::make('hours_summary')
+                            ->label('Totals')
+                            ->getStateUsing(fn (Model $record): string => sprintf(
+                                'Regular: %s h · Overtime: %s h · Total: %s h · Weighted: %s h',
+                                number_format($record->totalRegularHours(), 1),
+                                number_format($record->totalOvertimeHours(), 1),
+                                number_format($record->totalHours(), 1),
+                                number_format($record->weightedHours(), 1),
+                            )),
                         ViewEntry::make('tasks_grid')
                             ->view('filament.infolists.daily-tasks-grid')
                             ->visible(fn (Model $record) => collect($record->tasks ?? [])->contains(fn ($task) => filled($task))),
@@ -117,8 +129,8 @@ class ViewTimesheet extends ViewRecord
                                     ->badge()
                                     ->color(fn (string $state) => match ($state) {
                                         'submitted' => 'info',
-                                        'approved_pm', 'approved_pd' => 'success',
-                                        'rejected_pm', 'rejected_pd' => 'danger',
+                                        'approved_pm', 'approved_program_manager' => 'success',
+                                        'rejected_pm', 'rejected_program_manager' => 'danger',
                                         'reverted_to_draft' => 'warning',
                                         default => 'gray',
                                     })

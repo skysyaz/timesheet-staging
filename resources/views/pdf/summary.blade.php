@@ -64,8 +64,8 @@
             border: 1px solid #000;
             font-weight: normal;
         }
-        .data-table .label-col { width: 68%; text-align: left; }
-        .data-table .hrs-col { width: 32%; text-align: center; }
+        .data-table .label-col { width: 40%; text-align: left; }
+        .data-table .hrs-col { width: 15%; text-align: center; }
         .data-table tfoot td {
             font-weight: bold;
             background: #efefef;
@@ -136,18 +136,24 @@
     <thead>
         <tr>
             <th class="label-col">{{ $builder->dataColumnLabel() }}</th>
-            <th class="hrs-col">Hours</th>
+            <th class="hrs-col">Regular</th>
+            <th class="hrs-col">Overtime</th>
+            <th class="hrs-col">Total</th>
+            <th class="hrs-col">Weighted</th>
         </tr>
     </thead>
     <tbody>
         @forelse ($data as $row)
             <tr>
                 <td class="label-col">{{ $row['label'] }}</td>
+                <td class="hrs-col">{{ number_format($row['regular_hours'], 1) }}</td>
+                <td class="hrs-col">{{ number_format($row['overtime_hours'], 1) }}</td>
                 <td class="hrs-col">{{ number_format($row['hours'], 1) }}</td>
+                <td class="hrs-col">{{ number_format($row['weighted_hours'], 1) }}</td>
             </tr>
         @empty
             <tr>
-                <td colspan="2" style="text-align:center;">No data found for the selected filters.</td>
+                <td colspan="5" style="text-align:center;">No data found for the selected filters.</td>
             </tr>
         @endforelse
     </tbody>
@@ -155,13 +161,21 @@
         <tfoot>
             <tr>
                 <td class="label-col">Total</td>
+                <td class="hrs-col">{{ number_format($totalRegularHours, 1) }}</td>
+                <td class="hrs-col">{{ number_format($totalOvertimeHours, 1) }}</td>
                 <td class="hrs-col">{{ number_format($totalHours, 1) }}</td>
+                <td class="hrs-col">{{ number_format($totalWeightedHours, 1) }}</td>
             </tr>
         </tfoot>
     @endif
 </table>
 
-<div class="total">TOTAL HOURS : {{ number_format($totalHours, 1) }}</div>
+<div class="total">
+    REGULAR : {{ number_format($totalRegularHours, 1) }} |
+    OVERTIME : {{ number_format($totalOvertimeHours, 1) }} |
+    TOTAL : {{ number_format($totalHours, 1) }} |
+    WEIGHTED : {{ number_format($totalWeightedHours, 1) }}
+</div>
 
 <table class="sig">
     <tr>
@@ -177,7 +191,7 @@
     <tr>
         <td><div class="sig-role">(Staff)</div></td>
         <td><div class="sig-role">(Project Manager)</div></td>
-        <td><div class="sig-role">(Project Director)</div></td>
+        <td><div class="sig-role">(Program Manager)</div></td>
     </tr>
     <tr>
         <td><div class="sig-field">Name :</div></td>

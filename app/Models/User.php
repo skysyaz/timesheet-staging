@@ -65,9 +65,14 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return $this->role === 'project_manager';
     }
 
-    public function isProjectDirector(): bool
+    public function isProgramManager(): bool
     {
-        return $this->role === 'project_director';
+        return $this->role === 'program_manager';
+    }
+
+    public function isProjectAdmin(): bool
+    {
+        return $this->role === 'project_admin';
     }
 
     public function isEmployee(): bool
@@ -77,17 +82,22 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
 
     public function isApprover(): bool
     {
-        return in_array($this->role, ['admin', 'project_manager', 'project_director']);
+        return in_array($this->role, ['admin', 'project_manager', 'program_manager', 'project_admin'], true);
     }
 
     public function canApproveAsPm(): bool
     {
-        return in_array($this->role, ['admin', 'project_manager']);
+        return in_array($this->role, ['admin', 'project_manager'], true);
     }
 
-    public function canApproveAsPd(): bool
+    public function canApproveAsProgramManager(): bool
     {
-        return in_array($this->role, ['admin', 'project_director']);
+        return in_array($this->role, ['admin', 'program_manager'], true);
+    }
+
+    public function canManageUsers(): bool
+    {
+        return $this->isAdmin() || $this->isProjectAdmin();
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -95,7 +105,8 @@ class User extends Authenticatable implements FilamentUser, HasAppAuthentication
         return in_array($this->role, [
             'employee',
             'project_manager',
-            'project_director',
+            'program_manager',
+            'project_admin',
             'admin',
         ], true);
     }

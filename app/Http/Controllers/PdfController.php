@@ -88,12 +88,14 @@ class PdfController extends Controller
 
         $builder = TimesheetSummaryBuilder::fromValidated($validated);
         $data = $builder->groupedData();
-        $totalHours = $builder->totalHours();
         $project = $builder->resolvedProject();
 
         $pdf = Pdf::loadView('pdf.summary', [
             'data' => $data,
-            'totalHours' => $totalHours,
+            'totalHours' => $builder->totalHours(),
+            'totalRegularHours' => $builder->totalRegularHours(),
+            'totalOvertimeHours' => $builder->totalOvertimeHours(),
+            'totalWeightedHours' => $builder->totalWeightedHours(),
             'builder' => $builder,
             'project' => $project,
             'userName' => auth()->user()->name,

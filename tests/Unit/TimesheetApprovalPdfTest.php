@@ -18,8 +18,8 @@ class TimesheetApprovalPdfTest extends TestCase
     {
         $employee = User::factory()->create(['role' => 'employee', 'name' => 'Ali Staff']);
         $pm = User::factory()->projectManager()->create(['name' => 'Sara PM']);
-        $pd = User::factory()->projectDirector()->create(['name' => 'Dan PD']);
-        $project = Project::create(['code' => 'A', 'name' => 'Alpha']);
+        $programManager = User::factory()->programManager()->create(['name' => 'Dan Program Manager']);
+        $project = Project::create(['code' => 'A', 'name' => 'Alpha', 'project_type_id' => 1]);
         $monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         $timesheet = Timesheet::create([
@@ -27,6 +27,7 @@ class TimesheetApprovalPdfTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -46,8 +47,8 @@ class TimesheetApprovalPdfTest extends TestCase
 
         ApprovalLog::create([
             'timesheet_id' => $timesheet->id,
-            'user_id' => $pd->id,
-            'action' => 'approved_pd',
+            'user_id' => $programManager->id,
+            'action' => 'approved_program_manager',
             'created_at' => $monday->copy()->addDays(3),
         ]);
 
@@ -55,16 +56,16 @@ class TimesheetApprovalPdfTest extends TestCase
 
         $this->assertSame('Ali Staff', $timesheet->preparedByName());
         $this->assertSame('Sara PM', $timesheet->pmApproverName());
-        $this->assertSame('Dan PD', $timesheet->pdApproverName());
+        $this->assertSame('Dan Program Manager', $timesheet->programManagerApproverName());
         $this->assertSame($monday->copy()->addDays(2)->format('d/m/Y'), $timesheet->pmApproverDate());
-        $this->assertSame($monday->copy()->addDays(3)->format('d/m/Y'), $timesheet->pdApproverDate());
+        $this->assertSame($monday->copy()->addDays(3)->format('d/m/Y'), $timesheet->programManagerApproverDate());
     }
 
     public function test_weekly_pdf_endpoint_returns_pdf_with_approver_names(): void
     {
         $employee = User::factory()->create(['role' => 'employee', 'name' => 'Ali Staff']);
         $pm = User::factory()->projectManager()->create(['name' => 'Sara PM']);
-        $project = Project::create(['code' => 'A', 'name' => 'Alpha']);
+        $project = Project::create(['code' => 'A', 'name' => 'Alpha', 'project_type_id' => 1]);
         $monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         $timesheet = Timesheet::create([
@@ -72,7 +73,8 @@ class TimesheetApprovalPdfTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
-            'status' => 'pending_pd',
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'pending_program_manager',
         ]);
 
         ApprovalLog::create([
@@ -98,7 +100,7 @@ class TimesheetApprovalPdfTest extends TestCase
     public function test_weekly_pdf_view_includes_project_role_and_tasks(): void
     {
         $employee = User::factory()->create(['role' => 'employee', 'name' => 'Ali Staff']);
-        $project = Project::create(['code' => 'A', 'name' => 'Alpha']);
+        $project = Project::create(['code' => 'A', 'name' => 'Alpha', 'project_type_id' => 1]);
         $monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         $timesheet = Timesheet::create([
@@ -107,6 +109,7 @@ class TimesheetApprovalPdfTest extends TestCase
             'project_role' => 'Site Engineer',
             'week_start' => $monday,
             'hours' => [8, 8, 0, 0, 0, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'tasks' => ['Foundation work', 'Steel fixing', '', '', '', '', ''],
             'status' => 'draft',
         ]);

@@ -24,6 +24,7 @@ class PdfSummaryExportTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -32,6 +33,7 @@ class PdfSummaryExportTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday->copy()->subWeek(),
             'hours' => [4, 4, 4, 4, 4, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 

@@ -7,7 +7,7 @@ use App\Models\Setting;
 use App\Models\Timesheet;
 use App\Models\User;
 use App\Notifications\TimesheetApprovedNotification;
-use App\Notifications\TimesheetPendingDirectorNotification;
+use App\Notifications\TimesheetPendingProgramManagerNotification;
 use App\Notifications\TimesheetRejectedNotification;
 use App\Notifications\TimesheetSubmittedNotification;
 use App\Support\TimesheetNotifier;
@@ -26,7 +26,7 @@ class TimesheetNotificationTest extends TestCase
 
     private User $otherPm;
 
-    private User $pd;
+    private User $programManager;
 
     private User $admin;
 
@@ -41,13 +41,14 @@ class TimesheetNotificationTest extends TestCase
         $this->employee = User::factory()->create(['role' => 'employee']);
         $this->pm = User::factory()->projectManager()->create();
         $this->otherPm = User::factory()->projectManager()->create();
-        $this->pd = User::factory()->projectDirector()->create();
+        $this->programManager = User::factory()->programManager()->create();
         $this->admin = User::factory()->admin()->create();
         $this->project = Project::create([
             'code' => 'TEST-01',
             'name' => 'Test Project',
             'project_manager_id' => $this->pm->id,
-            'project_director_id' => $this->pd->id,
+            'program_manager_id' => $this->programManager->id,
+            'project_type_id' => 1,
         ]);
 
         $this->timesheet = Timesheet::create([
@@ -55,11 +56,12 @@ class TimesheetNotificationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => Carbon::now()->startOfWeek(Carbon::MONDAY),
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'pending_pm',
         ]);
 
         Setting::create(['key' => 'emailNotifications', 'value' => true]);
-        Setting::create(['key' => 'requireDirectorApproval', 'value' => true]);
+        Setting::create(['key' => 'requireProgramManagerApproval', 'value' => true]);
     }
 
     public function test_submission_notifies_assigned_project_manager_only(): void
@@ -86,21 +88,21 @@ class TimesheetNotificationTest extends TestCase
         Notification::assertNotSentTo($this->pm, TimesheetSubmittedNotification::class);
     }
 
-    public function test_pm_approval_notifies_assigned_project_director_only(): void
+    public function test_pm_approval_notifies_assigned_program_manager_only(): void
     {
         Notification::fake();
 
-        TimesheetNotifier::notifyPendingDirector($this->timesheet, 'Looks good');
+        TimesheetNotifier::notifyPendingProgramManager($this->timesheet, 'Looks good');
 
-        Notification::assertSentTo($this->pd, TimesheetPendingDirectorNotification::class);
-        Notification::assertNotSentTo($this->admin, TimesheetPendingDirectorNotification::class);
+        Notification::assertSentTo($this->programManager, TimesheetPendingProgramManagerNotification::class);
+        Notification::assertNotSentTo($this->admin, TimesheetPendingProgramManagerNotification::class);
     }
 
     public function test_final_approval_notifies_employee(): void
     {
         Notification::fake();
 
-        TimesheetNotifier::notifyApproved($this->timesheet, $this->pd, 'Approved');
+        TimesheetNotifier::notifyApproved($this->timesheet, $this->programManager, 'Approved');
 
         Notification::assertSentTo(
             $this->employee,

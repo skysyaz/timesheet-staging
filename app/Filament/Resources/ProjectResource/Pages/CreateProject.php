@@ -89,8 +89,8 @@ class CreateProject extends CreateRecord
             $data['project_manager_id'] = $user->id;
         }
 
-        if ($user?->isProjectDirector() && empty($data['project_director_id'])) {
-            $data['project_director_id'] = $user->id;
+        if ($user?->isProgramManager() && empty($data['program_manager_id'])) {
+            $data['program_manager_id'] = $user->id;
         }
 
         return $data;

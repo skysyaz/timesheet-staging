@@ -10,7 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class TimesheetPendingDirectorNotification extends Notification implements ShouldQueue, ShouldQueueAfterCommit
+class TimesheetPendingProgramManagerNotification extends Notification implements ShouldQueue, ShouldQueueAfterCommit
 {
     use BuildsTimesheetMail;
     use QueuesTimesheetNotification;
@@ -33,7 +33,7 @@ class TimesheetPendingDirectorNotification extends Notification implements Shoul
         $this->timesheet->loadMissing(['user', 'project']);
 
         $message = (new MailMessage)
-            ->subject('Timesheet awaiting Project Director approval')
+            ->subject('Timesheet awaiting Program Manager approval')
             ->greeting('Hello '.$notifiable->name.',')
             ->line('A timesheet has been approved by the Project Manager and now requires your sign-off.');
 

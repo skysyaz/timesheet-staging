@@ -25,6 +25,7 @@ class WeeklyHoursSheet
      *     project_name: string,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }>
@@ -54,6 +55,7 @@ class WeeklyHoursSheet
      *     project_name: string,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }>
@@ -134,6 +136,7 @@ class WeeklyHoursSheet
      *     project_id?: int|null,
      *     activity?: string|null,
      *     hours?: list<float|int|string|null>,
+     *     overtime_hours?: list<float|int|string|null>,
      *     status?: string|null,
      *     editable?: bool|null,
      * }>  $rows
@@ -165,6 +168,7 @@ class WeeklyHoursSheet
      *     project_id?: int|null,
      *     activity?: string|null,
      *     hours?: list<float|int|string|null>,
+     *     overtime_hours?: list<float|int|string|null>,
      *     status?: string|null,
      *     editable?: bool|null,
      * }>  $rows
@@ -173,6 +177,7 @@ class WeeklyHoursSheet
      *     project_id: ?int,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }>
@@ -184,12 +189,17 @@ class WeeklyHoursSheet
                 fn (mixed $value): float => WeeklyHoursFormatter::parse($value),
                 array_replace([0, 0, 0, 0, 0, 0, 0], array_values($row['hours'] ?? [])),
             );
+            $overtimeHours = array_map(
+                fn (mixed $value): float => WeeklyHoursFormatter::parse($value),
+                array_replace([0, 0, 0, 0, 0, 0, 0], array_values($row['overtime_hours'] ?? [])),
+            );
 
             return [
                 'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
                 'project_id' => filled($row['project_id'] ?? null) ? (int) $row['project_id'] : null,
                 'activity' => trim((string) ($row['activity'] ?? '')),
                 'hours' => $hours,
+                'overtime_hours' => $overtimeHours,
                 'status' => (string) ($row['status'] ?? 'draft'),
                 'editable' => (bool) ($row['editable'] ?? true),
             ];
@@ -202,6 +212,7 @@ class WeeklyHoursSheet
      *     project_id: ?int,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }>  $rows
@@ -228,12 +239,19 @@ class WeeklyHoursSheet
             }
 
             $validator = Validator::make(
-                ['hours' => $row['hours']],
-                ['hours' => [new ValidDailyHours()]],
+                [
+                    'hours' => $row['hours'],
+                    'overtime_hours' => $row['overtime_hours'],
+                ],
+                [
+                    'hours' => [new ValidDailyHours()],
+                    'overtime_hours' => [new ValidDailyHours()],
+                ],
             );
 
             if ($validator->fails()) {
-                $errors["rows.{$index}.hours"] = $validator->errors()->first('hours');
+                $errors["rows.{$index}.hours"] = $validator->errors()->first('hours')
+                    ?? $validator->errors()->first('overtime_hours');
             }
 
             if ($row['id']) {
@@ -262,6 +280,7 @@ class WeeklyHoursSheet
      *     project_id: ?int,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }  $row
@@ -274,6 +293,7 @@ class WeeklyHoursSheet
                 'project_id' => $row['project_id'],
                 'project_role' => $this->resolveProjectRole($timesheet, $row['project_id']),
                 'hours' => $row['hours'],
+                'overtime_hours' => $row['overtime_hours'],
                 'tasks' => $this->tasksFromActivity($row['activity'], $row['hours'], $timesheet->tasks),
             ]);
 
@@ -286,6 +306,7 @@ class WeeklyHoursSheet
             'project_role' => $this->assignedProjectRole($row['project_id']),
             'week_start' => $this->weekStart->toDateString(),
             'hours' => $row['hours'],
+            'overtime_hours' => $row['overtime_hours'],
             'tasks' => $this->tasksFromActivity($row['activity'], $row['hours'], null),
             'status' => 'draft',
         ]);
@@ -323,6 +344,10 @@ class WeeklyHoursSheet
                 fn (mixed $value): float => (float) $value,
                 array_replace([0, 0, 0, 0, 0, 0, 0], $timesheet->hours ?? []),
             ),
+            'overtime_hours' => array_map(
+                fn (mixed $value): float => (float) $value,
+                array_replace([0, 0, 0, 0, 0, 0, 0], $timesheet->overtime_hours ?? []),
+            ),
             'status' => $timesheet->status,
             'editable' => $timesheet->isEditable(),
         ];
@@ -335,6 +360,7 @@ class WeeklyHoursSheet
      *     project_name: string,
      *     activity: string,
      *     hours: list<float>,
+     *     overtime_hours: list<float>,
      *     status: string,
      *     editable: bool,
      * }
@@ -429,7 +455,7 @@ class WeeklyHoursSheet
 
         return match ($this->user->role) {
             'project_manager' => 'Project Manager',
-            'project_director' => 'Project Director',
+            'program_manager' => 'Program Manager',
             'admin' => 'Administrator',
             default => null,
         };

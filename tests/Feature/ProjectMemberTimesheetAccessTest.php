@@ -16,7 +16,7 @@ class ProjectMemberTimesheetAccessTest extends TestCase
     public function test_employee_only_sees_assigned_active_projects_in_timesheet_form(): void
     {
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $employee = User::factory()->create(['name' => 'Ainie Idris']);
 
         $assignedProject = Project::create([
@@ -26,7 +26,8 @@ class ProjectMemberTimesheetAccessTest extends TestCase
             'start_date' => '2026-06-22',
             'end_date' => '2026-06-28',
             'project_manager_id' => $pm->id,
-            'project_director_id' => $pd->id,
+            'program_manager_id' => $programManager->id,
+            'project_type_id' => 1,
             'created_by' => $pm->id,
         ]);
         $assignedProject->members()->attach($employee->id);
@@ -38,7 +39,8 @@ class ProjectMemberTimesheetAccessTest extends TestCase
             'start_date' => '2026-06-22',
             'end_date' => '2026-06-28',
             'project_manager_id' => $pm->id,
-            'project_director_id' => $pd->id,
+            'program_manager_id' => $programManager->id,
+            'project_type_id' => 1,
             'created_by' => $pm->id,
         ]);
 

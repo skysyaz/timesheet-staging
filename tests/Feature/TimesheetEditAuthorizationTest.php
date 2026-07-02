@@ -39,6 +39,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -54,6 +55,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -70,6 +72,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -86,6 +89,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -101,6 +105,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -116,6 +121,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -147,6 +153,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -164,6 +171,7 @@ class TimesheetEditAuthorizationTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 

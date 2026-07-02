@@ -78,36 +78,38 @@ class PdfAuthorizationTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_project_director_can_download_assigned_project_weekly_pdf(): void
+    public function test_program_manager_can_download_assigned_project_weekly_pdf(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $project = Project::create([
             'code' => 'A',
             'name' => 'Alpha',
-            'project_director_id' => $pd->id,
+            'program_manager_id' => $programManager->id,
+            'project_type_id' => 1,
         ]);
         $timesheet = $this->createTimesheet($employee, $project);
 
-        $this->actingAs($pd)
+        $this->actingAs($programManager)
             ->get("/pdf/timesheet/{$timesheet->id}")
             ->assertOk()
             ->assertHeader('content-type', 'application/pdf');
     }
 
-    public function test_project_director_cannot_download_unassigned_project_weekly_pdf(): void
+    public function test_program_manager_cannot_download_unassigned_project_weekly_pdf(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
-        $pd = User::factory()->projectDirector()->create();
-        $otherPd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
+        $otherProgramManager = User::factory()->programManager()->create();
         $project = Project::create([
             'code' => 'A',
             'name' => 'Alpha',
-            'project_director_id' => $otherPd->id,
+            'program_manager_id' => $otherProgramManager->id,
+            'project_type_id' => 1,
         ]);
         $timesheet = $this->createTimesheet($employee, $project);
 
-        $this->actingAs($pd)
+        $this->actingAs($programManager)
             ->get("/pdf/timesheet/{$timesheet->id}")
             ->assertForbidden();
     }
@@ -148,16 +150,17 @@ class PdfAuthorizationTest extends TestCase
             ->assertHeader('content-type', 'application/pdf');
     }
 
-    public function test_project_director_cannot_export_summary_for_unassigned_project_filter(): void
+    public function test_program_manager_cannot_export_summary_for_unassigned_project_filter(): void
     {
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $otherProject = Project::create([
             'code' => 'B',
             'name' => 'Other',
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
+            'project_type_id' => 1,
         ]);
 
-        $this->actingAs($pd)
+        $this->actingAs($programManager)
             ->get('/pdf/summary?projectId=' . $otherProject->id)
             ->assertForbidden();
     }
@@ -234,6 +237,7 @@ class PdfAuthorizationTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $this->monday,
             'hours' => $hours,
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
     }

@@ -5,14 +5,17 @@ namespace App\Filament\Resources;
 use App\Filament\Concerns\ConfiguresTableToolbar;
 use App\Filament\Resources\ProjectResource\Pages;
 use App\Models\Project;
+use App\Models\ProjectType;
 use App\Models\User;
 use App\Support\TimesheetAccess;
+use App\Support\UserAccess;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ProjectResource extends Resource
@@ -39,6 +42,12 @@ class ProjectResource extends Resource
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
+                        Forms\Components\Select::make('project_type_id')
+                            ->label('Project type')
+                            ->options(fn (): array => ProjectType::activeOptions())
+                            ->required()
+                            ->searchable()
+                            ->preload(),
                         Forms\Components\Textarea::make('description')
                             ->label('Description')
                             ->rows(3)
@@ -87,14 +96,14 @@ class ProjectResource extends Resource
                             ->searchable()
                             ->preload()
                             ->required(),
-                        Forms\Components\Select::make('project_director_id')
-                            ->label('Project Director')
+                        Forms\Components\Select::make('program_manager_id')
+                            ->label('Program Manager')
                             ->relationship(
-                                'projectDirector',
+                                'programManager',
                                 'name',
-                                fn ($query) => $query->whereIn('role', ['project_director', 'admin'])
+                                fn ($query) => $query->whereIn('role', ['program_manager', 'admin'])
                             )
-                            ->default(fn () => auth()->user()?->isProjectDirector() ? auth()->id() : null)
+                            ->default(fn () => auth()->user()?->isProgramManager() ? auth()->id() : null)
                             ->searchable()
                             ->preload()
                             ->required(),
@@ -108,7 +117,11 @@ class ProjectResource extends Resource
                                 Forms\Components\Select::make('user_id')
                                     ->label('Member')
                                     ->options(fn (): array => User::query()
-                                        ->where('role', 'employee')
+                                        ->when(
+                                            auth()->user() && ! auth()->user()->isAdmin(),
+                                            fn (Builder $query) => UserAccess::scopeVisibleUsers($query, auth()->user()),
+                                        )
+                                        ->where('role', '!=', 'admin')
                                         ->orderBy('name')
                                         ->get()
                                         ->mapWithKeys(fn (User $user): array => [
@@ -156,6 +169,10 @@ class ProjectResource extends Resource
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('projectType.name')
+                    ->label('Type')
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Start')
                     ->date('d/m/Y')
@@ -174,8 +191,8 @@ class ProjectResource extends Resource
                     ->label('PM')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('projectDirector.name')
-                    ->label('PD')
+                Tables\Columns\TextColumn::make('programManager.name')
+                    ->label('PgM')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('schedule_status')
@@ -208,6 +225,9 @@ class ProjectResource extends Resource
                         'inactive' => 'Inactive',
                         'archived' => 'Archived',
                     ]),
+                Tables\Filters\SelectFilter::make('project_type_id')
+                    ->label('Project type')
+                    ->relationship('projectType', 'name'),
             ])
             ->actions([
                 \Filament\Actions\ViewAction::make(),
@@ -268,6 +288,12 @@ class ProjectResource extends Resource
     public static function canViewAny(): bool
     {
         $user = auth()->user();
-        return $user && in_array($user->role, ['admin', 'project_manager', 'project_director']);
+
+        return $user && in_array($user->role, [
+            'admin',
+            'project_admin',
+            'project_manager',
+            'program_manager',
+        ], true);
     }
 }

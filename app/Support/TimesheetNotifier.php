@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Setting;
 use App\Models\Timesheet;
 use App\Models\User;
+use App\Notifications\TimesheetPendingProgramManagerNotification;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -35,21 +36,21 @@ class TimesheetNotifier
         );
     }
 
-    public static function notifyPendingDirector(Timesheet $timesheet, ?string $pmComment = null): void
+    public static function notifyPendingProgramManager(Timesheet $timesheet, ?string $pmComment = null): void
     {
         if (! static::enabled()) {
-            static::logSkipped('pending_director', $timesheet, 'email_notifications_disabled');
+            static::logSkipped('pending_program_manager', $timesheet, 'email_notifications_disabled');
 
             return;
         }
 
-        $timesheet->loadMissing(['user', 'project.projectDirector']);
+        $timesheet->loadMissing(['user', 'project.programManager']);
 
         static::notifyRecipients(
-            'pending_director',
+            'pending_program_manager',
             $timesheet,
-            static::directorRecipients($timesheet),
-            new \App\Notifications\TimesheetPendingDirectorNotification($timesheet, $pmComment),
+            static::programManagerRecipients($timesheet),
+            new TimesheetPendingProgramManagerNotification($timesheet, $pmComment),
         );
     }
 
@@ -118,12 +119,12 @@ class TimesheetNotifier
     /**
      * @return Collection<int, User>
      */
-    protected static function directorRecipients(Timesheet $timesheet): Collection
+    protected static function programManagerRecipients(Timesheet $timesheet): Collection
     {
-        $director = $timesheet->project?->projectDirector;
+        $programManager = $timesheet->project?->programManager;
 
-        if ($director) {
-            return collect([$director]);
+        if ($programManager) {
+            return collect([$programManager]);
         }
 
         return static::admins();

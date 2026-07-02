@@ -42,14 +42,14 @@ class UserTest extends TestCase
         $this->assertFalse($emp->canApproveAsPm());
     }
 
-    public function test_can_approve_as_pd(): void
+    public function test_can_approve_as_program_manager(): void
     {
-        $pd = new User(['role' => 'project_director']);
+        $programManager = new User(['role' => 'program_manager']);
         $admin = new User(['role' => 'admin']);
         $pm = new User(['role' => 'project_manager']);
 
-        $this->assertTrue($pd->canApproveAsPd());
-        $this->assertTrue($admin->canApproveAsPd());
-        $this->assertFalse($pm->canApproveAsPd());
+        $this->assertTrue($programManager->canApproveAsProgramManager());
+        $this->assertTrue($admin->canApproveAsProgramManager());
+        $this->assertFalse($pm->canApproveAsProgramManager());
     }
 }

@@ -58,18 +58,42 @@ class Reports extends Page
     {
         $data = $this->getReportData();
         $total = $this->getTotalHours();
+        $totalRegular = $this->getTotalRegularHours();
+        $totalOvertime = $this->getTotalOvertimeHours();
+        $totalWeighted = $this->getTotalWeightedHours();
         $filename = 'timesheet-report-' . now()->format('Y-m-d-His') . '.csv';
 
-        return response()->streamDownload(function () use ($data, $total): void {
+        return response()->streamDownload(function () use ($data, $total, $totalRegular, $totalOvertime, $totalWeighted): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, [$this->summaryBuilder()->dataColumnLabel(), 'Hours', 'Share %']);
+            fputcsv($handle, [
+                $this->summaryBuilder()->dataColumnLabel(),
+                'Regular Hours',
+                'Overtime Hours',
+                'Total Hours',
+                'Weighted Hours',
+                'Share %',
+            ]);
 
             foreach ($data as $row) {
                 $share = $total > 0 ? round(($row['hours'] / $total) * 100, 1) : 0;
-                fputcsv($handle, [$row['label'], number_format($row['hours'], 1, '.', ''), $share]);
+                fputcsv($handle, [
+                    $row['label'],
+                    number_format($row['regular_hours'], 1, '.', ''),
+                    number_format($row['overtime_hours'], 1, '.', ''),
+                    number_format($row['hours'], 1, '.', ''),
+                    number_format($row['weighted_hours'], 1, '.', ''),
+                    $share,
+                ]);
             }
 
-            fputcsv($handle, ['Total', number_format($total, 1, '.', ''), $total > 0 ? 100 : 0]);
+            fputcsv($handle, [
+                'Total',
+                number_format($totalRegular, 1, '.', ''),
+                number_format($totalOvertime, 1, '.', ''),
+                number_format($total, 1, '.', ''),
+                number_format($totalWeighted, 1, '.', ''),
+                $total > 0 ? 100 : 0,
+            ]);
             fclose($handle);
         }, $filename, [
             'Content-Type' => 'text/csv',
@@ -123,6 +147,21 @@ class Reports extends Page
     public function getTotalHours(): float
     {
         return $this->summaryBuilder()->totalHours();
+    }
+
+    public function getTotalRegularHours(): float
+    {
+        return $this->summaryBuilder()->totalRegularHours();
+    }
+
+    public function getTotalOvertimeHours(): float
+    {
+        return $this->summaryBuilder()->totalOvertimeHours();
+    }
+
+    public function getTotalWeightedHours(): float
+    {
+        return $this->summaryBuilder()->totalWeightedHours();
     }
 
     public function getReportCount(): int

@@ -14,7 +14,7 @@ class TimesheetAccess
     public const TIMESHEET_STATUSES = [
         'draft',
         'pending_pm',
-        'pending_pd',
+        'pending_program_manager',
         'approved',
         'rejected',
     ];
@@ -62,8 +62,12 @@ class TimesheetAccess
             return $project->project_manager_id === $user->id;
         }
 
-        if ($user->isProjectDirector()) {
-            return $project->project_director_id === $user->id;
+        if ($user->isProgramManager()) {
+            return $project->program_manager_id === $user->id;
+        }
+
+        if ($user->isProjectAdmin()) {
+            return true;
         }
 
         return false;
@@ -105,11 +109,11 @@ class TimesheetAccess
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isProjectAdmin()) {
             return true;
         }
 
-        return $user->isProjectManager() || $user->isProjectDirector();
+        return $user->isProjectManager() || $user->isProgramManager();
     }
 
     public static function userCanEditProject(User $user, ?Project $project): bool
@@ -118,7 +122,7 @@ class TimesheetAccess
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isProjectAdmin()) {
             return true;
         }
 
@@ -136,7 +140,7 @@ class TimesheetAccess
             return false;
         }
 
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isProjectAdmin()) {
             return true;
         }
 
@@ -144,8 +148,8 @@ class TimesheetAccess
             return $project->project_manager_id === $user->id;
         }
 
-        if ($user->isProjectDirector()) {
-            return $project->project_director_id === $user->id;
+        if ($user->isProgramManager()) {
+            return $project->program_manager_id === $user->id;
         }
 
         return false;
@@ -153,7 +157,7 @@ class TimesheetAccess
 
     public static function scopeTimesheetsForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isProjectAdmin()) {
             return $query;
         }
 
@@ -161,7 +165,7 @@ class TimesheetAccess
             return $query->where('user_id', $user->id);
         }
 
-        if ($user->isProjectManager() || $user->isProjectDirector()) {
+        if ($user->isProjectManager() || $user->isProgramManager()) {
             return $query->where(function (Builder $scopedQuery) use ($user): void {
                 $scopedQuery
                     ->whereHas(
@@ -180,7 +184,7 @@ class TimesheetAccess
 
     public static function scopeProjectsForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin() || $user->isProjectManager() || $user->isProjectDirector()) {
+        if ($user->isAdmin() || $user->isProjectManager() || $user->isProgramManager() || $user->isProjectAdmin()) {
             return $query;
         }
 
@@ -193,7 +197,7 @@ class TimesheetAccess
 
     public static function scopeAssignedProjectsForUser(Builder $query, User $user): Builder
     {
-        if ($user->isAdmin()) {
+        if ($user->isAdmin() || $user->isProjectAdmin()) {
             return $query;
         }
 
@@ -205,16 +209,14 @@ class TimesheetAccess
             return $query->where('project_manager_id', $user->id);
         }
 
-        if ($user->isProjectDirector()) {
-            return $query->where('project_director_id', $user->id);
+        if ($user->isProgramManager()) {
+            return $query->where('program_manager_id', $user->id);
         }
 
         return $query->whereRaw('0 = 1');
     }
 
     /**
-     * Users an admin may assign when creating or editing a timesheet on behalf of someone else.
-     *
      * @return array<int, string>
      */
     public static function assignableUserOptionsForAdmin(): array
@@ -226,8 +228,6 @@ class TimesheetAccess
     }
 
     /**
-     * Users visible in timesheet list filters for approver roles.
-     *
      * @return array<int, string>
      */
     public static function userFilterOptionsForViewer(?User $viewer): array
@@ -240,17 +240,21 @@ class TimesheetAccess
             return self::assignableUserOptionsForAdmin();
         }
 
-        return User::query()
-            ->orderBy('name')
-            ->where(function (Builder $userQuery) use ($viewer): void {
+        $query = User::query()->orderBy('name');
+
+        if ($viewer->isProjectAdmin()) {
+            UserAccess::scopeVisibleUsers($query, $viewer);
+        } else {
+            $query->where(function (Builder $userQuery) use ($viewer): void {
                 $userQuery
                     ->whereHas(
                         'timesheets.project',
                         fn (Builder $projectQuery) => self::scopeAssignedProjectsForUser($projectQuery, $viewer),
                     )
                     ->orWhere('id', $viewer->id);
-            })
-            ->pluck('name', 'id')
-            ->all();
+            });
+        }
+
+        return $query->pluck('name', 'id')->all();
     }
 }

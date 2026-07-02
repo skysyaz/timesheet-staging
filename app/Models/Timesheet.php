@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsAuditableChanges;
+use App\Models\Setting;
 use Illuminate\Database\Eloquent\Model;
 
 class Timesheet extends Model
@@ -15,6 +16,7 @@ class Timesheet extends Model
         'project_role',
         'week_start',
         'hours',
+        'overtime_hours',
         'tasks',
         'status',
         'notes',
@@ -25,6 +27,7 @@ class Timesheet extends Model
         return [
             'week_start' => 'date',
             'hours' => 'array',
+            'overtime_hours' => 'array',
             'tasks' => 'array',
         ];
     }
@@ -85,19 +88,36 @@ class Timesheet extends Model
         return $this->latestApprovalLog('approved_pm')?->created_at?->format('d/m/Y') ?? '';
     }
 
-    public function pdApproverName(): string
+    public function programManagerApproverName(): string
     {
-        return $this->latestApprovalLog('approved_pd')?->user?->name ?? '';
+        return $this->latestApprovalLog('approved_program_manager')?->user?->name ?? '';
     }
 
-    public function pdApproverDate(): string
+    public function programManagerApproverDate(): string
     {
-        return $this->latestApprovalLog('approved_pd')?->created_at?->format('d/m/Y') ?? '';
+        return $this->latestApprovalLog('approved_program_manager')?->created_at?->format('d/m/Y') ?? '';
+    }
+
+    public function totalRegularHours(): float
+    {
+        return array_sum($this->hours ?? [0, 0, 0, 0, 0, 0, 0]);
+    }
+
+    public function totalOvertimeHours(): float
+    {
+        return array_sum($this->overtime_hours ?? [0, 0, 0, 0, 0, 0, 0]);
     }
 
     public function totalHours(): float
     {
-        return array_sum($this->hours ?? [0, 0, 0, 0, 0, 0, 0]);
+        return $this->totalRegularHours() + $this->totalOvertimeHours();
+    }
+
+    public function weightedHours(): float
+    {
+        $rate = Setting::overtimeRate();
+
+        return $this->totalRegularHours() + ($this->totalOvertimeHours() * $rate);
     }
 
     public function taskForDay(int $index): string
@@ -110,8 +130,9 @@ class Timesheet extends Model
         }
 
         $hours = (float) ($this->hours[$index] ?? 0);
+        $overtime = (float) ($this->overtime_hours[$index] ?? 0);
 
-        if ($hours > 0 && filled($this->notes)) {
+        if (($hours + $overtime) > 0 && filled($this->notes)) {
             return (string) $this->notes;
         }
 
@@ -128,9 +149,9 @@ class Timesheet extends Model
         return $this->status === 'pending_pm';
     }
 
-    public function isPendingPd(): bool
+    public function isPendingProgramManager(): bool
     {
-        return $this->status === 'pending_pd';
+        return $this->status === 'pending_program_manager';
     }
 
     public function isApproved(): bool
@@ -145,12 +166,12 @@ class Timesheet extends Model
 
     public function isEditable(): bool
     {
-        return in_array($this->status, ['draft', 'rejected']);
+        return in_array($this->status, ['draft', 'rejected'], true);
     }
 
     public function isSubmittable(): bool
     {
-        return in_array($this->status, ['draft', 'rejected']);
+        return in_array($this->status, ['draft', 'rejected'], true);
     }
 
     public function canBeApprovedBy(User $user): bool
@@ -162,8 +183,8 @@ class Timesheet extends Model
             return $project?->isManagedBy($user) ?? false;
         }
 
-        if ($this->isPendingPd()) {
-            return $project?->isDirectedBy($user) ?? false;
+        if ($this->isPendingProgramManager()) {
+            return $project?->isLedByProgramManager($user) ?? false;
         }
 
         return false;

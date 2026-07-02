@@ -68,10 +68,10 @@ class TimesheetTest extends TestCase
         $this->assertTrue($ts->isPendingPm());
     }
 
-    public function test_is_pending_pd(): void
+    public function test_is_pending_program_manager(): void
     {
-        $ts = new Timesheet(['status' => 'pending_pd']);
-        $this->assertTrue($ts->isPendingPd());
+        $ts = new Timesheet(['status' => 'pending_program_manager']);
+        $this->assertTrue($ts->isPendingProgramManager());
     }
 
     public function test_is_approved(): void

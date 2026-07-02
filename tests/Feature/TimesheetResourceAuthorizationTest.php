@@ -35,6 +35,7 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => $assignedProject->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -43,6 +44,7 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => $otherProject->id,
             'week_start' => $monday,
             'hours' => [4, 4, 4, 4, 4, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -56,19 +58,21 @@ class TimesheetResourceAuthorizationTest extends TestCase
         );
     }
 
-    public function test_resource_query_scopes_project_director_to_assigned_projects(): void
+    public function test_resource_query_scopes_program_manager_to_assigned_projects(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $assignedProject = Project::create([
             'code' => 'A',
             'name' => 'Assigned',
-            'project_director_id' => $pd->id,
+            'program_manager_id' => $programManager->id,
+            'project_type_id' => 1,
         ]);
         $otherProject = Project::create([
             'code' => 'B',
             'name' => 'Other',
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
+            'project_type_id' => 1,
         ]);
         $monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
@@ -77,6 +81,7 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => $assignedProject->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -85,10 +90,11 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => $otherProject->id,
             'week_start' => $monday,
             'hours' => [4, 4, 4, 4, 4, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
-        $this->actingAs($pd);
+        $this->actingAs($programManager);
 
         $visibleIds = TimesheetResource::getEloquentQuery()->pluck('id');
 
@@ -109,6 +115,7 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => Project::create(['code' => 'A', 'name' => 'Alpha'])->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -117,6 +124,7 @@ class TimesheetResourceAuthorizationTest extends TestCase
             'project_id' => Project::create(['code' => 'B', 'name' => 'Beta'])->id,
             'week_start' => $monday,
             'hours' => [4, 4, 4, 4, 4, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Concerns\ConfiguresTableToolbar;
+use App\Filament\Forms\Components\DailyOvertimeHoursGrid;
 use App\Filament\Forms\Components\DailyTasksGrid;
 use App\Filament\Forms\Components\WeeklyTimesheetPlanner;
 use App\Filament\Resources\TimesheetResource\Pages;
@@ -12,6 +13,7 @@ use App\Models\User;
 use App\Rules\ValidDailyHours;
 use App\Rules\WeekStartsOnMonday;
 use App\Support\AuditLogger;
+use App\Support\OvertimeValidator;
 use App\Support\ProjectDisplay;
 use App\Support\TimesheetAccess;
 use App\Support\TimesheetNotifier;
@@ -152,6 +154,9 @@ class TimesheetResource extends Resource
                         WeeklyTimesheetPlanner::make('hours')
                             ->hiddenLabel()
                             ->columnSpanFull(),
+                        DailyOvertimeHoursGrid::make('overtime_hours')
+                            ->hiddenLabel()
+                            ->columnSpanFull(),
                         DailyTasksGrid::make('tasks')
                             ->hiddenLabel()
                             ->view('filament.forms.components.empty-field')
@@ -211,7 +216,7 @@ class TimesheetResource extends Resource
                     ->badge()
                     ->color(fn(string $state) => match ($state) {
                         'approved' => 'success',
-                        'pending_pd', 'pending_pm' => 'warning',
+                        'pending_program_manager', 'pending_pm' => 'warning',
                         'rejected' => 'danger',
                         default => 'gray',
                     })
@@ -227,7 +232,7 @@ class TimesheetResource extends Resource
                     ->options([
                         'draft' => 'Draft',
                         'pending_pm' => 'Pending PM',
-                        'pending_pd' => 'Pending Director',
+                        'pending_program_manager' => 'Pending Program Manager',
                         'approved' => 'Approved',
                         'rejected' => 'Rejected',
                     ]),
@@ -246,7 +251,7 @@ class TimesheetResource extends Resource
                         'approvalLogs',
                         fn (Builder $logQuery) => $logQuery
                             ->where('user_id', auth()->id())
-                            ->whereIn('action', ['approved_pm', 'approved_pd']),
+                            ->whereIn('action', ['approved_pm', 'approved_program_manager']),
                     )),
                 Tables\Filters\SelectFilter::make('user_id')
                     ->options(fn (): array => TimesheetAccess::userFilterOptionsForViewer(auth()->user()))
@@ -372,18 +377,33 @@ class TimesheetResource extends Resource
                 'project_role' => $record->project_role,
                 'week_start' => $record->week_start?->format('Y-m-d'),
                 'hours' => $record->hours ?? [],
+                'overtime_hours' => $record->overtime_hours ?? [],
             ],
             [
                 'project_id' => ['required'],
                 'project_role' => ['required', 'string', 'max:100'],
                 'week_start' => ['required', new WeekStartsOnMonday],
                 'hours' => ['required', new ValidDailyHours],
+                'overtime_hours' => ['required', new ValidDailyHours],
             ],
         );
 
         $validator->after(function ($validator) use ($record): void {
             if ($record->totalHours() <= 0) {
                 $validator->errors()->add('hours', 'Enter at least some hours before submitting.');
+            }
+
+            try {
+                OvertimeValidator::validate(
+                    $record->hours ?? [],
+                    $record->overtime_hours ?? [],
+                );
+            } catch (ValidationException $exception) {
+                foreach ($exception->errors() as $key => $messages) {
+                    foreach ($messages as $message) {
+                        $validator->errors()->add($key, $message);
+                    }
+                }
             }
         });
 
@@ -397,7 +417,7 @@ class TimesheetResource extends Resource
         $record->loadMissing('project');
 
         if ($user && $record->project?->isManagedBy($user) && $user->canApproveAsPm()) {
-            return 'Submit this timesheet for project director approval? You will not be able to edit it until it is rejected or reverted to draft.';
+            return 'Submit this timesheet for program manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
         }
 
         return 'Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
@@ -405,8 +425,8 @@ class TimesheetResource extends Resource
 
     public static function submitSuccessMessage(?User $user, Timesheet $record): string
     {
-        if ($record->isPendingPd()) {
-            return 'Your timesheet has been sent to the project director for approval.';
+        if ($record->isPendingProgramManager()) {
+            return 'Your timesheet has been sent to the program manager for approval.';
         }
 
         if ($record->isApproved()) {
@@ -434,7 +454,7 @@ class TimesheetResource extends Resource
 
         $record->loadMissing('project');
         $project = $record->project;
-        $requireDirector = Setting::getValue('requireDirectorApproval', true);
+        $requireProgramManager = Setting::programManagerApprovalRequired();
 
         $record->approvalLogs()->create([
             'user_id' => $user->id,
@@ -448,15 +468,15 @@ class TimesheetResource extends Resource
                 'comment' => 'Auto-approved as submitting project manager.',
             ]);
 
-            if ($requireDirector) {
-                $record->update(['status' => 'pending_pd']);
+            if ($requireProgramManager) {
+                $record->update(['status' => 'pending_program_manager']);
 
-                AuditLogger::log('Timesheet submitted by PM, pending PD', $record, [
+                AuditLogger::log('Timesheet submitted by PM, pending Program Manager', $record, [
                     'action' => 'approved_pm',
-                    'status' => 'pending_pd',
+                    'status' => 'pending_program_manager',
                 ]);
 
-                TimesheetNotifier::notifyPendingDirector($record->fresh(['user', 'project']));
+                TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']));
 
                 return;
             }
@@ -507,7 +527,7 @@ class TimesheetResource extends Resource
 
         $defaultRole = match ($user->role) {
             'project_manager' => 'Project Manager',
-            'project_director' => 'Project Director',
+            'program_manager' => 'Program Manager',
             'admin' => 'Administrator',
             default => null,
         };
@@ -522,21 +542,21 @@ class TimesheetResource extends Resource
         $user = auth()->user();
 
         if ($record->isPendingPm() && $record->canBeApprovedBy($user)) {
-            $requireDirector = Setting::getValue('requireDirectorApproval', true);
+            $requireProgramManager = Setting::programManagerApprovalRequired();
 
-            if ($requireDirector) {
-                $record->update(['status' => 'pending_pd']);
+            if ($requireProgramManager) {
+                $record->update(['status' => 'pending_program_manager']);
                 $record->approvalLogs()->create([
                     'user_id' => $user->id,
                     'action' => 'approved_pm',
                     'comment' => $comment,
                 ]);
 
-                TimesheetNotifier::notifyPendingDirector($record->fresh(['user', 'project']), $comment);
+                TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']), $comment);
 
-                AuditLogger::log('Timesheet approved by PM, pending PD', $record, [
+                AuditLogger::log('Timesheet approved by PM, pending Program Manager', $record, [
                     'action' => 'approved_pm',
-                    'status' => 'pending_pd',
+                    'status' => 'pending_program_manager',
                 ]);
 
                 return;
@@ -559,18 +579,18 @@ class TimesheetResource extends Resource
             return;
         }
 
-        if ($record->isPendingPd() && $record->canBeApprovedBy($user)) {
+        if ($record->isPendingProgramManager() && $record->canBeApprovedBy($user)) {
             $record->update(['status' => 'approved']);
             $record->approvalLogs()->create([
                 'user_id' => $user->id,
-                'action' => 'approved_pd',
+                'action' => 'approved_program_manager',
                 'comment' => $comment,
             ]);
 
             TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
 
-            AuditLogger::log('Timesheet approved (PD)', $record, [
-                'action' => 'approved_pd',
+            AuditLogger::log('Timesheet approved (Program Manager)', $record, [
+                'action' => 'approved_program_manager',
                 'status' => 'approved',
             ]);
         }
@@ -579,7 +599,7 @@ class TimesheetResource extends Resource
     public static function handleReject(Timesheet $record, string $comment): void
     {
         $user = auth()->user();
-        $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_pd';
+        $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_program_manager';
 
         $record->update(['status' => 'rejected']);
         $record->approvalLogs()->create([

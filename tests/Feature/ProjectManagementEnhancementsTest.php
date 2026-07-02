@@ -36,6 +36,7 @@ class ProjectManagementEnhancementsTest extends TestCase
             'project_id' => $project->id,
             'week_start' => '2026-06-22',
             'hours' => [8, 8, 8, 0, 0, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -60,6 +61,7 @@ class ProjectManagementEnhancementsTest extends TestCase
             'project_id' => $project->id,
             'week_start' => '2026-06-22',
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
         Timesheet::create([
@@ -90,6 +92,7 @@ class ProjectManagementEnhancementsTest extends TestCase
             'project_id' => $project->id,
             'week_start' => '2026-06-22',
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 

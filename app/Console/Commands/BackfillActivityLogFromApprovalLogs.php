@@ -73,7 +73,11 @@ class BackfillActivityLogFromApprovalLogs extends Command
         return match ($action) {
             'submitted' => 'Timesheet submitted for approval',
             'approved_pm' => 'Timesheet approved by PM',
-            'approved_pd' => 'Timesheet approved by PD',
+            'rejected_pm' => 'Timesheet rejected by PM',
+            'approved_program_manager' => 'Timesheet approved by Program Manager',
+            'approved_pd' => 'Timesheet approved by Program Manager',
+            'rejected_program_manager' => 'Timesheet rejected by Program Manager',
+            'rejected_pd' => 'Timesheet rejected by Program Manager',
             'rejected' => 'Timesheet rejected',
             'reverted' => 'Timesheet reverted to draft',
             default => 'Timesheet workflow action: ' . str_replace('_', ' ', $action),

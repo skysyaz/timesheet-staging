@@ -37,9 +37,9 @@ class TimesheetStatsOverview extends BaseWidget
         $total = $all->sum(fn ($t) => $t->totalHours());
         $monthHours = $thisMonth->sum(fn ($t) => $t->totalHours());
         $approved = $all->where('status', 'approved')->count();
-        $pending = $all->whereIn('status', ['pending_pm', 'pending_pd'])->count();
+        $pending = $all->whereIn('status', ['pending_pm', 'pending_program_manager'])->count();
         $std = Setting::standardWeeklyHours();
-        $overtime = $all->filter(fn ($t) => $t->totalHours() > $std)->count();
+        $overtime = $all->sum(fn ($t) => $t->totalOvertimeHours());
 
         return [
             Stat::make('Total Hours', number_format($total, 1) . 'h')
@@ -60,9 +60,9 @@ class TimesheetStatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-o-arrow-path')
                 ->descriptionColor('warning')
                 ->color('warning'),
-            Stat::make('Overtime Weeks', $overtime)
+            Stat::make('Overtime Hours', number_format($overtime, 1) . 'h')
                 ->icon('heroicon-o-exclamation-triangle')
-                ->description('Exceeding ' . $std . 'h standard')
+                ->description('Standard week is ' . $std . 'h')
                 ->descriptionIcon('heroicon-o-exclamation-triangle')
                 ->descriptionColor('danger')
                 ->color('danger'),

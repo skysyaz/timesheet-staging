@@ -20,6 +20,7 @@ class Setting extends Model
     public static function getValue(string $key, mixed $default = null): mixed
     {
         $setting = static::where('key', $key)->first();
+
         return $setting ? $setting->value : $default;
     }
 
@@ -34,6 +35,23 @@ class Setting extends Model
     public static function standardWeeklyHours(): float
     {
         return (float) static::getValue('standardWeeklyHours', 40);
+    }
+
+    public static function overtimeDailyThreshold(): ?float
+    {
+        $value = static::getValue('overtimeDailyThreshold');
+
+        return $value === null ? null : (float) $value;
+    }
+
+    public static function overtimeRate(): float
+    {
+        return (float) static::getValue('overtimeRate', 1.5);
+    }
+
+    public static function programManagerApprovalRequired(): bool
+    {
+        return (bool) static::getValue('requireProgramManagerApproval', true);
     }
 
     public static function emailNotificationsEnabled(): bool

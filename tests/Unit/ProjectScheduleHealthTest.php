@@ -74,6 +74,7 @@ class ProjectScheduleHealthTest extends TestCase
             'project_id' => $project->id,
             'week_start' => '2026-06-02',
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 

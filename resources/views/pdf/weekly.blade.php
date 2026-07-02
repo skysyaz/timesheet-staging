@@ -20,10 +20,10 @@
         .hrs-table { border: 1px solid #000; margin-top: 16pt; }
         .hrs-table th { background: #d9d9d9; text-align: center; font-size: 7.5pt; font-weight: bold; padding: 3pt 2pt; border: 1px solid #000; }
         .hrs-table td { text-align: center; font-size: 8pt; padding: 7pt 2pt; border: 1px solid #000; font-weight: normal; }
-        .hrs-table .day-col { width: 10%; }
-        .hrs-table .date-col { width: 15%; }
-        .hrs-table .task-col { width: 55%; }
-        .hrs-table .hrs-col { width: 20%; }
+        .hrs-table .day-col { width: 9%; }
+        .hrs-table .date-col { width: 12%; }
+        .hrs-table .task-col { width: 43%; }
+        .hrs-table .num-col { width: 12%; }
         .total { text-align: right; font-size: 9pt; font-weight: bold; margin-top: 12pt; }
         .sig-spacer { height: 202pt; }
         .sig { margin-top: 0; }
@@ -79,7 +79,9 @@
             <th class="day-col">DAY</th>
             <th class="date-col">DATE</th>
             <th class="task-col">ACTIVITY/TASK</th>
-            <th class="hrs-col">HOURS</th>
+            <th class="num-col">REG</th>
+            <th class="num-col">OT</th>
+            <th class="num-col">TOTAL</th>
         </tr>
     </thead>
     <tbody>
@@ -88,17 +90,27 @@
             $shortDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         @endphp
         @foreach ($days as $i => $day)
+            @php
+                $regular = (float) ($timesheet->hours[$i] ?? 0);
+                $overtime = (float) ($timesheet->overtime_hours[$i] ?? 0);
+            @endphp
             <tr>
                 <td>{{ $shortDays[$i] }}</td>
                 <td>{{ $timesheet->week_start->copy()->addDays($i)->format('d/m/Y') }}</td>
                 <td>{{ $timesheet->taskForDay($i) }}</td>
-                <td>{{ isset($timesheet->hours[$i]) ? number_format($timesheet->hours[$i], 1) : '0.0' }}</td>
+                <td>{{ number_format($regular, 1) }}</td>
+                <td>{{ number_format($overtime, 1) }}</td>
+                <td>{{ number_format($regular + $overtime, 1) }}</td>
             </tr>
         @endforeach
     </tbody>
 </table>
 
-<div class="total">TOTAL NO. OF HOURS : {{ number_format($timesheet->totalHours(), 1) }}</div>
+<div class="total">
+    REGULAR : {{ number_format($timesheet->totalRegularHours(), 1) }} |
+    OVERTIME : {{ number_format($timesheet->totalOvertimeHours(), 1) }} |
+    TOTAL : {{ number_format($timesheet->totalHours(), 1) }}
+</div>
 
 <div class="sig-spacer"></div>
 
@@ -116,17 +128,17 @@
         <tr>
             <td><div class="sig-role">(Staff)</div></td>
             <td><div class="sig-role">Project Manager</div></td>
-            <td><div class="sig-role">Project Director</div></td>
+            <td><div class="sig-role">Program Manager</div></td>
         </tr>
         <tr>
             <td><div class="sig-field">Name : {{ $timesheet->preparedByName() }}</div></td>
             <td><div class="sig-field">Name : {{ $timesheet->pmApproverName() }}</div></td>
-            <td><div class="sig-field">Name : {{ $timesheet->pdApproverName() }}</div></td>
+            <td><div class="sig-field">Name : {{ $timesheet->programManagerApproverName() }}</div></td>
         </tr>
         <tr>
             <td><div class="sig-field">Date : {{ $timesheet->preparedByDate() }}</div></td>
             <td><div class="sig-field">Date : {{ $timesheet->pmApproverDate() }}</div></td>
-            <td><div class="sig-field">Date : {{ $timesheet->pdApproverDate() }}</div></td>
+            <td><div class="sig-field">Date : {{ $timesheet->programManagerApproverDate() }}</div></td>
         </tr>
     </table>
 

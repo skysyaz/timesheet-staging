@@ -49,10 +49,17 @@ class UserFactory extends Factory
         ]);
     }
 
-    public function projectDirector(): static
+    public function programManager(): static
     {
         return $this->state(fn(array $attributes) => [
-            'role' => 'project_director',
+            'role' => 'program_manager',
+        ]);
+    }
+
+    public function projectAdmin(): static
+    {
+        return $this->state(fn(array $attributes) => [
+            'role' => 'project_admin',
         ]);
     }
 

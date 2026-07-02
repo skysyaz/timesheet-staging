@@ -16,7 +16,7 @@ class ProjectCreateTest extends TestCase
     public function test_project_manager_can_create_project_with_timeline_and_members(): void
     {
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $memberOne = User::factory()->create(['name' => 'Ainie Idris']);
         $memberTwo = User::factory()->create(['name' => 'Team Member']);
 
@@ -31,7 +31,8 @@ class ProjectCreateTest extends TestCase
                 'start_date' => '2026-06-22',
                 'end_date' => '2026-06-28',
                 'project_manager_id' => $pm->id,
-                'project_director_id' => $pd->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
                 'member_assignments' => [
                     ['user_id' => $memberOne->id, 'assigned_role' => 'Designer'],
                     ['user_id' => $memberTwo->id, 'assigned_role' => 'Developer'],
@@ -61,7 +62,7 @@ class ProjectCreateTest extends TestCase
     public function test_end_date_must_be_on_or_after_start_date(): void
     {
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $member = User::factory()->create();
 
         $this->actingAs($pm);
@@ -74,7 +75,8 @@ class ProjectCreateTest extends TestCase
                 'start_date' => '2026-06-28',
                 'end_date' => '2026-06-22',
                 'project_manager_id' => $pm->id,
-                'project_director_id' => $pd->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
                 'member_assignments' => [
                     ['user_id' => $member->id, 'assigned_role' => 'Developer'],
                 ],
@@ -88,7 +90,7 @@ class ProjectCreateTest extends TestCase
     public function test_project_requires_at_least_one_member(): void
     {
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
 
         $this->actingAs($pm);
 
@@ -100,7 +102,8 @@ class ProjectCreateTest extends TestCase
                 'start_date' => '2026-06-22',
                 'end_date' => '2026-06-28',
                 'project_manager_id' => $pm->id,
-                'project_director_id' => $pd->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
                 'member_assignments' => [],
             ])
             ->call('create')
@@ -113,7 +116,7 @@ class ProjectCreateTest extends TestCase
     {
         Project::create(['code' => 'EXIST', 'name' => 'Website Redesign']);
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $member = User::factory()->create();
 
         $this->actingAs($pm);
@@ -126,7 +129,8 @@ class ProjectCreateTest extends TestCase
                 'start_date' => '2026-06-22',
                 'end_date' => '2026-06-28',
                 'project_manager_id' => $pm->id,
-                'project_director_id' => $pd->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
                 'member_assignments' => [
                     ['user_id' => $member->id, 'assigned_role' => 'Developer'],
                 ],
@@ -138,7 +142,7 @@ class ProjectCreateTest extends TestCase
     public function test_created_project_redirects_to_view_page(): void
     {
         $pm = User::factory()->projectManager()->create();
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $member = User::factory()->create();
 
         $this->actingAs($pm);
@@ -151,7 +155,8 @@ class ProjectCreateTest extends TestCase
                 'start_date' => '2026-06-22',
                 'end_date' => '2026-06-28',
                 'project_manager_id' => $pm->id,
-                'project_director_id' => $pd->id,
+                'program_manager_id' => $programManager->id,
+                'project_type_id' => 1,
                 'member_assignments' => [
                     ['user_id' => $member->id, 'assigned_role' => 'Developer'],
                 ],

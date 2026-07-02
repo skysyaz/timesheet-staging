@@ -30,6 +30,7 @@ class ActivityLogTest extends TestCase
             'project_id' => $project->id,
             'week_start' => Carbon::now()->startOfWeek(Carbon::MONDAY),
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'tasks' => ['Build', 'Review', 'Deploy', 'Test', 'Docs'],
             'status' => 'draft',
         ]);
@@ -55,7 +56,7 @@ class ActivityLogTest extends TestCase
 
     public function test_pm_approval_creates_manual_audit_entry(): void
     {
-        Setting::create(['key' => 'requireDirectorApproval', 'value' => true]);
+        Setting::create(['key' => 'requireProgramManagerApproval', 'value' => true]);
 
         $employee = User::factory()->create(['role' => 'employee']);
         $pm = User::factory()->projectManager()->create();
@@ -70,6 +71,7 @@ class ActivityLogTest extends TestCase
             'project_id' => $project->id,
             'week_start' => Carbon::now()->startOfWeek(Carbon::MONDAY),
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'pending_pm',
         ]);
 

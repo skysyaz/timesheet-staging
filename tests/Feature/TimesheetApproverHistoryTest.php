@@ -34,6 +34,7 @@ class TimesheetApproverHistoryTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -77,6 +78,7 @@ class TimesheetApproverHistoryTest extends TestCase
                 'project_id' => $project->id,
                 'week_start' => $monday,
                 'hours' => [8, 8, 8, 8, 8, 0, 0],
+                'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
                 'status' => 'approved',
             ]);
         }
@@ -102,7 +104,7 @@ class TimesheetApproverHistoryTest extends TestCase
             'name' => 'Assigned',
             'status' => 'active',
             'project_manager_id' => $pm->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => $pm->id,
         ]);
         Project::create([
@@ -110,7 +112,7 @@ class TimesheetApproverHistoryTest extends TestCase
             'name' => 'Other',
             'status' => 'active',
             'project_manager_id' => User::factory()->projectManager()->create()->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 

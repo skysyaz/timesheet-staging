@@ -20,7 +20,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'A',
             'name' => 'Assigned',
             'project_manager_id' => $pm->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => $pm->id,
         ]);
 
@@ -28,7 +28,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'B',
             'name' => 'Other',
             'project_manager_id' => User::factory()->projectManager()->create()->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 
@@ -44,7 +44,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'B',
             'name' => 'Other',
             'project_manager_id' => $pm->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 
@@ -54,18 +54,19 @@ class ProjectResourceAuthorizationTest extends TestCase
         $this->assertTrue(ProjectResource::canEdit($other));
     }
 
-    public function test_project_director_can_edit_assigned_project(): void
+    public function test_program_manager_can_edit_assigned_project(): void
     {
-        $pd = User::factory()->projectDirector()->create();
+        $programManager = User::factory()->programManager()->create();
         $project = Project::create([
             'code' => 'C',
             'name' => 'Directed',
             'project_manager_id' => User::factory()->projectManager()->create()->id,
-            'project_director_id' => $pd->id,
+            'program_manager_id' => $programManager->id,
+            'project_type_id' => 1,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 
-        $this->actingAs($pd);
+        $this->actingAs($programManager);
 
         $this->assertTrue(ProjectResource::canEdit($project));
     }
@@ -77,7 +78,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'D',
             'name' => 'Unassigned',
             'project_manager_id' => User::factory()->projectManager()->create()->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 
@@ -94,7 +95,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'A',
             'name' => 'Mine',
             'project_manager_id' => $pm->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => $pm->id,
         ]);
 
@@ -110,9 +111,9 @@ class ProjectResourceAuthorizationTest extends TestCase
         $this->assertTrue(ProjectResource::canCreate());
     }
 
-    public function test_project_director_can_create_projects(): void
+    public function test_program_manager_can_create_projects(): void
     {
-        $this->actingAs(User::factory()->projectDirector()->create());
+        $this->actingAs(User::factory()->programManager()->create());
 
         $this->assertTrue(ProjectResource::canCreate());
     }
@@ -124,7 +125,7 @@ class ProjectResourceAuthorizationTest extends TestCase
             'code' => 'A',
             'name' => 'Any',
             'project_manager_id' => User::factory()->projectManager()->create()->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 

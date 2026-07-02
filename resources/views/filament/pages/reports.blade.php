@@ -1,6 +1,6 @@
 <x-filament-panels::page>
     {{-- Summary cards --}}
-    <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div class="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div class="corp-stat-card" style="border-bottom-color: rgb(29 78 216);">
             <div class="flex flex-col items-center justify-center gap-1.5 py-1 text-center">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Entries</p>
@@ -13,9 +13,20 @@
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
                     {{ number_format($this->getTotalHours(), 1) }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
                 </p>
+                <p class="text-xs text-slate-400">
+                    Reg {{ number_format($this->getTotalRegularHours(), 1) }} · OT {{ number_format($this->getTotalOvertimeHours(), 1) }}
+                </p>
             </div>
         </div>
         <div class="corp-stat-card" style="border-bottom-color: rgb(180 83 9);">
+            <div class="flex flex-col items-center justify-center gap-1.5 py-1 text-center">
+                <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Weighted</p>
+                <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
+                    {{ number_format($this->getTotalWeightedHours(), 1) }}<span class="ml-0.5 text-lg font-medium text-slate-400">h</span>
+                </p>
+            </div>
+        </div>
+        <div class="corp-stat-card" style="border-bottom-color: rgb(124 58 237);">
             <div class="flex flex-col items-center justify-center gap-1.5 py-1 text-center">
                 <p class="text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400">Average</p>
                 <p class="text-3xl font-bold leading-none tabular-nums text-slate-900 dark:text-white">
@@ -28,7 +39,7 @@
     {{-- Filters --}}
     <x-filament::section
         heading="Report Filters"
-        description="Refine your report by date range, project, and grouping. Project managers and directors see analytics for every project they are assigned to."
+        description="Refine your report by date range, project, and grouping. Project managers and program managers see analytics for every project they are assigned to."
     >
         <div class="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
             <div class="min-w-0 space-y-2">
@@ -82,7 +93,7 @@
             'month' => 'Hours by Month',
             default => 'Report Results',
         } }}"
-        description="{{ $this->getReportCount() }} {{ $this->getReportCount() === 1 ? 'entry' : 'entries' }} · {{ number_format($this->getTotalHours(), 1) }} total hours"
+        description="{{ $this->getReportCount() }} {{ $this->getReportCount() === 1 ? 'entry' : 'entries' }} · {{ number_format($this->getTotalHours(), 1) }} total hours · {{ number_format($this->getTotalWeightedHours(), 1) }} weighted"
     >
         @php $data = $this->getReportData(); $total = $this->getTotalHours(); @endphp
 
@@ -99,7 +110,10 @@
                                     default => 'Project',
                                 } }}
                             </th>
-                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Hours</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Regular</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">OT</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</th>
+                            <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Weighted</th>
                             <th class="whitespace-nowrap px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Share</th>
                             <th class="min-w-[10rem] px-5 py-3.5 text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Distribution</th>
                         </tr>
@@ -109,7 +123,10 @@
                             @php $pct = $total > 0 ? ($row['hours'] / $total * 100) : 0; @endphp
                             <tr>
                                 <td class="max-w-xs truncate px-5 py-4 font-medium text-gray-900 dark:text-white" title="{{ $row['label'] }}">{{ $row['label'] }}</td>
+                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['regular_hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['overtime_hours'], 1) }}h</td>
                                 <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['hours'], 1) }}h</td>
+                                <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-700 dark:text-gray-300">{{ number_format($row['weighted_hours'], 1) }}h</td>
                                 <td class="whitespace-nowrap px-5 py-4 tabular-nums text-gray-500 dark:text-gray-400">{{ number_format($pct, 1) }}%</td>
                                 <td class="px-5 py-4">
                                     <div class="corp-progress-track">
@@ -122,7 +139,10 @@
                     <tfoot>
                         <tr class="border-t-2 border-gray-200 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-900/50">
                             <td class="px-5 py-3.5 font-semibold text-gray-900 dark:text-white">Total</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalRegularHours(), 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalOvertimeHours(), 1) }}h</td>
                             <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($total, 1) }}h</td>
+                            <td class="whitespace-nowrap px-5 py-3.5 font-semibold tabular-nums text-gray-900 dark:text-white">{{ number_format($this->getTotalWeightedHours(), 1) }}h</td>
                             <td class="whitespace-nowrap px-5 py-3.5 font-semibold text-gray-500">100%</td>
                             <td></td>
                         </tr>

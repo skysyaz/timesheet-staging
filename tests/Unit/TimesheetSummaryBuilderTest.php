@@ -39,6 +39,7 @@ class TimesheetSummaryBuilderTest extends TestCase
             'project_id' => $projectA->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -75,6 +76,7 @@ class TimesheetSummaryBuilderTest extends TestCase
             'project_id' => $project->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 
@@ -112,6 +114,7 @@ class TimesheetSummaryBuilderTest extends TestCase
             'project_id' => $assignedProject->id,
             'week_start' => $monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'approved',
         ]);
 

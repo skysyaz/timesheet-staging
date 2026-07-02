@@ -35,7 +35,7 @@ class WelcomeBanner extends Widget
     public function getPendingCount(): int
     {
         $user = auth()->user();
-        $query = Timesheet::query()->whereIn('status', ['pending_pm', 'pending_pd']);
+        $query = Timesheet::query()->whereIn('status', ['pending_pm', 'pending_program_manager']);
 
         if ($user->isEmployee()) {
             return $query->where('user_id', $user->id)->count();
@@ -45,8 +45,8 @@ class WelcomeBanner extends Widget
             return (clone $query)->where('status', 'pending_pm')->count();
         }
 
-        if ($user->canApproveAsPd()) {
-            return (clone $query)->where('status', 'pending_pd')->count();
+        if ($user->canApproveAsProgramManager()) {
+            return (clone $query)->where('status', 'pending_program_manager')->count();
         }
 
         return $query->count();

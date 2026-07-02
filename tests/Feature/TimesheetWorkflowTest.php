@@ -16,7 +16,7 @@ class TimesheetWorkflowTest extends TestCase
 
     private User $employee;
     private User $pm;
-    private User $pd;
+    private User $programManager;
     private User $admin;
     private Project $project;
     private Carbon $monday;
@@ -27,12 +27,12 @@ class TimesheetWorkflowTest extends TestCase
 
         $this->employee = User::factory()->create(['role' => 'employee']);
         $this->pm = User::factory()->projectManager()->create();
-        $this->pd = User::factory()->projectDirector()->create();
+        $this->programManager = User::factory()->programManager()->create();
         $this->admin = User::factory()->admin()->create();
-        $this->project = Project::create(['code' => 'TEST-01', 'name' => 'Test Project']);
+        $this->project = Project::create(['code' => 'TEST-01', 'name' => 'Test Project', 'project_type_id' => 1]);
         $this->monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
-        Setting::create(['key' => 'requireDirectorApproval', 'value' => true]);
+        Setting::create(['key' => 'requireProgramManagerApproval', 'value' => true]);
     }
 
     public function test_employee_can_create_timesheet(): void
@@ -50,6 +50,7 @@ class TimesheetWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -66,6 +67,7 @@ class TimesheetWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'pending_pm',
         ]);
 
@@ -74,18 +76,19 @@ class TimesheetWorkflowTest extends TestCase
         $this->assertFalse($ts->isApproved());
     }
 
-    public function test_pd_can_approve_pending_director_timesheet(): void
+    public function test_program_manager_can_approve_pending_program_manager_timesheet(): void
     {
         $ts = Timesheet::create([
             'user_id' => $this->employee->id,
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
-            'status' => 'pending_pd',
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'pending_program_manager',
         ]);
 
-        $this->assertTrue($ts->isPendingPd());
-        $this->assertTrue($this->pd->canApproveAsPd());
+        $this->assertTrue($ts->isPendingProgramManager());
+        $this->assertTrue($this->programManager->canApproveAsProgramManager());
     }
 
     public function test_employee_cannot_see_other_timesheets(): void
@@ -97,6 +100,7 @@ class TimesheetWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -105,6 +109,7 @@ class TimesheetWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
 
@@ -120,6 +125,7 @@ class TimesheetWorkflowTest extends TestCase
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'rejected',
         ]);
 
@@ -128,27 +134,28 @@ class TimesheetWorkflowTest extends TestCase
         $this->assertTrue($ts->isSubmittable());
     }
 
-    public function test_approval_flow_without_director(): void
+    public function test_approval_flow_without_program_manager(): void
     {
-        Setting::setValue('requireDirectorApproval', false);
+        Setting::setValue('requireProgramManagerApproval', false);
 
         $ts = Timesheet::create([
             'user_id' => $this->employee->id,
             'project_id' => $this->project->id,
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'pending_pm',
         ]);
 
         $this->assertTrue($ts->isPendingPm());
-        $this->assertFalse(Setting::getValue('requireDirectorApproval', true));
+        $this->assertFalse(Setting::getValue('requireProgramManagerApproval', true));
     }
 
     public function test_models_have_expected_fillable_fields(): void
     {
         $ts = new Timesheet();
         $this->assertEquals([
-            'user_id', 'project_id', 'project_role', 'week_start', 'hours', 'tasks', 'status', 'notes',
+            'user_id', 'project_id', 'project_role', 'week_start', 'hours', 'overtime_hours', 'tasks', 'status', 'notes',
         ], $ts->getFillable());
 
         $user = new User();

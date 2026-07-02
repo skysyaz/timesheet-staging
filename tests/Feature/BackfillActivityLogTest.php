@@ -27,6 +27,7 @@ class BackfillActivityLogTest extends TestCase
             'project_id' => $project->id,
             'week_start' => Carbon::now()->startOfWeek(Carbon::MONDAY),
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'pending_pm',
         ]);
 

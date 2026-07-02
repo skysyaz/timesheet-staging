@@ -7,7 +7,7 @@ use App\Models\Project;
 use App\Models\Setting;
 use App\Models\Timesheet;
 use App\Models\User;
-use App\Notifications\TimesheetPendingDirectorNotification;
+use App\Notifications\TimesheetPendingProgramManagerNotification;
 use App\Notifications\TimesheetSubmittedNotification;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,7 +22,7 @@ class TimesheetNotificationWorkflowTest extends TestCase
 
     private User $pm;
 
-    private User $pd;
+    private User $programManager;
 
     private Project $project;
 
@@ -34,17 +34,18 @@ class TimesheetNotificationWorkflowTest extends TestCase
 
         $this->employee = User::factory()->create(['role' => 'employee']);
         $this->pm = User::factory()->projectManager()->create();
-        $this->pd = User::factory()->projectDirector()->create();
+        $this->programManager = User::factory()->programManager()->create();
         $this->project = Project::create([
             'code' => 'WF-01',
             'name' => 'Workflow Project',
             'project_manager_id' => $this->pm->id,
-            'project_director_id' => $this->pd->id,
+            'program_manager_id' => $this->programManager->id,
+            'project_type_id' => 1,
         ]);
         $this->monday = Carbon::now()->startOfWeek(Carbon::MONDAY);
 
         Setting::create(['key' => 'emailNotifications', 'value' => true]);
-        Setting::create(['key' => 'requireDirectorApproval', 'value' => true]);
+        Setting::create(['key' => 'requireProgramManagerApproval', 'value' => true]);
     }
 
     private function draftTimesheet(): Timesheet
@@ -55,6 +56,7 @@ class TimesheetNotificationWorkflowTest extends TestCase
             'project_role' => 'Engineer',
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ]);
     }
@@ -72,7 +74,7 @@ class TimesheetNotificationWorkflowTest extends TestCase
         $this->assertSame('pending_pm', $timesheet->fresh()->status);
     }
 
-    public function test_pm_approval_notifies_project_director(): void
+    public function test_pm_approval_notifies_program_manager(): void
     {
         $timesheet = $this->draftTimesheet();
         $timesheet->update(['status' => 'pending_pm']);
@@ -83,7 +85,7 @@ class TimesheetNotificationWorkflowTest extends TestCase
 
         TimesheetResource::handleApprove($timesheet, 'Approved by PM');
 
-        Notification::assertSentTo($this->pd, TimesheetPendingDirectorNotification::class);
-        $this->assertSame('pending_pd', $timesheet->fresh()->status);
+        Notification::assertSentTo($this->programManager, TimesheetPendingProgramManagerNotification::class);
+        $this->assertSame('pending_program_manager', $timesheet->fresh()->status);
     }
 }

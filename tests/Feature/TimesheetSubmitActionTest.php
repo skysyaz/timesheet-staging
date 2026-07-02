@@ -42,6 +42,7 @@ class TimesheetSubmitActionTest extends TestCase
             'project_role' => 'Site Engineer',
             'week_start' => $this->monday,
             'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
         ], $overrides));
     }

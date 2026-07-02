@@ -17,7 +17,7 @@ class ViewProject extends ViewRecord
     {
         parent::mount($record);
 
-        $this->record->load(['members', 'timesheets.user']);
+        $this->record->load(['members', 'timesheets.user', 'projectType']);
     }
 
     protected function getHeaderActions(): array
@@ -38,6 +38,8 @@ class ViewProject extends ViewRecord
                             ->badge()
                             ->color('primary'),
                         TextEntry::make('name'),
+                        TextEntry::make('projectType.name')
+                            ->label('Project type'),
                         TextEntry::make('status')
                             ->badge()
                             ->formatStateUsing(fn (string $state) => ucfirst($state))
@@ -98,8 +100,8 @@ class ViewProject extends ViewRecord
                     ->schema([
                         TextEntry::make('projectManager.name')
                             ->label('Project Manager'),
-                        TextEntry::make('projectDirector.name')
-                            ->label('Project Director'),
+                        TextEntry::make('programManager.name')
+                            ->label('Program Manager'),
                     ])
                     ->columns(2),
                 Section::make('Team members')

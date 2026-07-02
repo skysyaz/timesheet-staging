@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\LogsAuditableChanges;
 use App\Support\ProjectScheduleHealth;
+use App\Models\ProjectType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -11,6 +12,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 class Project extends Model
 {
     use LogsAuditableChanges;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project): void {
+            if (! $project->project_type_id) {
+                $project->project_type_id = ProjectType::defaultId();
+            }
+        });
+    }
 
     protected $fillable = [
         'code',
@@ -20,7 +30,8 @@ class Project extends Model
         'start_date',
         'end_date',
         'project_manager_id',
-        'project_director_id',
+        'program_manager_id',
+        'project_type_id',
         'created_by',
     ];
 
@@ -37,6 +48,11 @@ class Project extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function projectType(): BelongsTo
+    {
+        return $this->belongsTo(ProjectType::class, 'project_type_id');
+    }
+
     public function timesheets()
     {
         return $this->hasMany(Timesheet::class);
@@ -47,9 +63,9 @@ class Project extends Model
         return $this->belongsTo(User::class, 'project_manager_id');
     }
 
-    public function projectDirector(): BelongsTo
+    public function programManager(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'project_director_id');
+        return $this->belongsTo(User::class, 'program_manager_id');
     }
 
     public function members(): BelongsToMany
@@ -73,13 +89,13 @@ class Project extends Model
         return $user->canApproveAsPm() && $this->project_manager_id === $user->id;
     }
 
-    public function isDirectedBy(User $user): bool
+    public function isLedByProgramManager(User $user): bool
     {
         if ($user->isAdmin()) {
             return true;
         }
 
-        return $user->canApproveAsPd() && $this->project_director_id === $user->id;
+        return $user->canApproveAsProgramManager() && $this->program_manager_id === $user->id;
     }
 
     public function totalHours(): float
@@ -137,7 +153,8 @@ class Project extends Model
             'start_date',
             'end_date',
             'project_manager_id',
-            'project_director_id',
+            'program_manager_id',
+            'project_type_id',
             'created_by',
         ];
     }

@@ -19,7 +19,8 @@ class ProjectViewRouteTest extends TestCase
             'code' => 'PRJ',
             'name' => 'Demo',
             'project_manager_id' => $pm->id,
-            'project_director_id' => User::factory()->projectDirector()->create()->id,
+            'program_manager_id' => User::factory()->programManager()->create()->id,
+            'project_type_id' => 1,
             'created_by' => User::factory()->projectManager()->create()->id,
         ]);
 
