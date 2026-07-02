@@ -470,6 +470,55 @@ class WeeklyHoursPageTest extends TestCase
         $this->assertDatabaseCount('timesheets', 3);
     }
 
+    public function test_weekly_hours_page_surfaces_overtime_totals(): void
+    {
+        Timesheet::create([
+            'user_id' => $this->employee->id,
+            'project_id' => $this->projectA->id,
+            'project_role' => 'Developer',
+            'week_start' => $this->monday->toDateString(),
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [2, 0, 0, 0, 1, 0, 0],
+            'tasks' => ['Work', 'Work', 'Work', 'Work', 'Work', '', ''],
+            'status' => 'draft',
+        ]);
+
+        $component = Livewire::actingAs($this->employee)
+            ->test(WeeklyHours::class)
+            ->set('weekStart', $this->monday->toDateString());
+
+        $this->assertSame('2:00', $component->instance()->columnOvertimeTotals()[0]);
+        $this->assertSame('1:00', $component->instance()->columnOvertimeTotals()[4]);
+        $this->assertSame('3:00', $component->instance()->grandOvertimeTotal());
+        $this->assertSame('40:00', $component->instance()->grandTotal());
+    }
+
+    public function test_saving_overtime_hours_updates_weekly_totals(): void
+    {
+        Livewire::actingAs($this->employee)
+            ->test(WeeklyHours::class)
+            ->set('weekStart', $this->monday->toDateString())
+            ->set('rows', [
+                [
+                    'id' => null,
+                    'project_id' => $this->projectA->id,
+                    'activity' => 'Release support',
+                    'hours' => [8, 0, 0, 0, 0, 0, 0],
+                    'overtime_hours' => [0, 3, 0, 0, 0, 0, 0],
+                    'status' => 'draft',
+                    'editable' => true,
+                ],
+            ])
+            ->call('save')
+            ->assertNotified('Weekly hours saved');
+
+        $component = Livewire::actingAs($this->employee)
+            ->test(WeeklyHours::class)
+            ->set('weekStart', $this->monday->toDateString());
+
+        $this->assertSame('3:00', $component->instance()->grandOvertimeTotal());
+    }
+
     private function seedWeeklyHours(): void
     {
         Timesheet::create([

@@ -50,15 +50,15 @@ class WeeklyHoursFormatter
     }
 
     /**
-     * @param  list<array{hours: list<float|int|string|null>}>  $rows
+     * @param  list<array{hours?: list<float|int|string|null>, overtime_hours?: list<float|int|string|null>}>  $rows
      * @return list<float>
      */
-    public static function columnTotals(array $rows): array
+    public static function columnTotals(array $rows, string $field = 'hours'): array
     {
         $totals = array_fill(0, 7, 0.0);
 
         foreach ($rows as $row) {
-            foreach (array_values($row['hours'] ?? []) as $index => $value) {
+            foreach (array_values($row[$field] ?? []) as $index => $value) {
                 if ($index > 6) {
                     break;
                 }

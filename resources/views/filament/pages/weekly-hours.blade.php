@@ -90,7 +90,7 @@
                                         <input
                                             type="text"
                                             inputmode="decimal"
-                                            wire:model.blur="rows.{{ $rowIndex }}.hours.{{ $dayIndex }}"
+                                            wire:model.live="rows.{{ $rowIndex }}.hours.{{ $dayIndex }}"
                                             placeholder="0:00"
                                             class="corp-weekly-hours-hour-input"
                                         />
@@ -103,7 +103,7 @@
                                 {{ $this->rowDuration($row) }}
                             </td>
                             @if ($this->canEditSheet())
-                                <td class="corp-weekly-hours-actions">
+                                <td class="corp-weekly-hours-actions" rowspan="2">
                                     @if ($editable)
                                         <button
                                             type="button"
@@ -117,11 +117,38 @@
                                 </td>
                             @endif
                         </tr>
+                        <tr
+                            wire:key="weekly-hours-ot-row-{{ $row['id'] ?? 'new-' . $rowIndex }}"
+                            class="corp-weekly-hours-ot-row"
+                        >
+                            <td colspan="2" class="corp-weekly-hours-ot-label">Overtime</td>
+                            @foreach (range(0, 6) as $dayIndex)
+                                <td @class([
+                                    'corp-weekly-hours-td-day',
+                                    'is-weekend' => $dayIndex >= 5,
+                                ])>
+                                    @if ($editable)
+                                        <input
+                                            type="text"
+                                            inputmode="decimal"
+                                            wire:model.live="rows.{{ $rowIndex }}.overtime_hours.{{ $dayIndex }}"
+                                            placeholder="0:00"
+                                            class="corp-weekly-hours-hour-input"
+                                        />
+                                    @else
+                                        <span class="corp-weekly-hours-readonly">{{ $this->formatHours($row['overtime_hours'][$dayIndex] ?? 0) }}</span>
+                                    @endif
+                                </td>
+                            @endforeach
+                            <td class="corp-weekly-hours-duration">
+                                {{ $this->rowOvertimeDuration($row) }}
+                            </td>
+                        </tr>
                     @endforeach
                 </tbody>
                 <tfoot>
                     <tr>
-                        <td colspan="2" class="corp-weekly-hours-total-label">Total</td>
+                        <td colspan="2" class="corp-weekly-hours-total-label">Regular total</td>
                         @foreach ($this->columnTotals() as $index => $total)
                             <td @class([
                                 'corp-weekly-hours-total-cell',
@@ -130,6 +157,20 @@
                             ])>{{ $total }}</td>
                         @endforeach
                         <td class="corp-weekly-hours-total-cell corp-weekly-hours-duration">{{ $this->grandTotal() }}</td>
+                        @if ($this->canEditSheet())
+                            <td></td>
+                        @endif
+                    </tr>
+                    <tr class="corp-weekly-hours-total-row-ot">
+                        <td colspan="2" class="corp-weekly-hours-total-label">Overtime total</td>
+                        @foreach ($this->columnOvertimeTotals() as $index => $total)
+                            <td @class([
+                                'corp-weekly-hours-total-cell',
+                                'corp-weekly-hours-td-day',
+                                'is-weekend' => $index >= 5,
+                            ])>{{ $total }}</td>
+                        @endforeach
+                        <td class="corp-weekly-hours-total-cell corp-weekly-hours-duration">{{ $this->grandOvertimeTotal() }}</td>
                         @if ($this->canEditSheet())
                             <td></td>
                         @endif

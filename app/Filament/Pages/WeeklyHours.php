@@ -186,6 +186,7 @@ class WeeklyHours extends Page
             'project_name' => '',
             'activity' => '',
             'hours' => [0, 0, 0, 0, 0, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
             'editable' => true,
         ];
@@ -253,6 +254,11 @@ class WeeklyHours extends Page
         return WeeklyHoursFormatter::display(WeeklyHoursFormatter::rowTotal($row['hours'] ?? []));
     }
 
+    public function rowOvertimeDuration(array $row): string
+    {
+        return WeeklyHoursFormatter::display(WeeklyHoursFormatter::rowTotal($row['overtime_hours'] ?? []));
+    }
+
     /**
      * @return list<string>
      */
@@ -260,13 +266,31 @@ class WeeklyHours extends Page
     {
         return array_map(
             fn (float $total): string => WeeklyHoursFormatter::display($total),
-            WeeklyHoursFormatter::columnTotals($this->rows),
+            WeeklyHoursFormatter::columnTotals($this->rows, 'hours'),
+        );
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function columnOvertimeTotals(): array
+    {
+        return array_map(
+            fn (float $total): string => WeeklyHoursFormatter::display($total),
+            WeeklyHoursFormatter::columnTotals($this->rows, 'overtime_hours'),
         );
     }
 
     public function grandTotal(): string
     {
-        $total = array_sum(WeeklyHoursFormatter::columnTotals($this->rows));
+        $total = array_sum(WeeklyHoursFormatter::columnTotals($this->rows, 'hours'));
+
+        return WeeklyHoursFormatter::display($total);
+    }
+
+    public function grandOvertimeTotal(): string
+    {
+        $total = array_sum(WeeklyHoursFormatter::columnTotals($this->rows, 'overtime_hours'));
 
         return WeeklyHoursFormatter::display($total);
     }

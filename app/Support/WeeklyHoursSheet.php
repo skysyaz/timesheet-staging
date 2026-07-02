@@ -373,6 +373,7 @@ class WeeklyHoursSheet
             'project_name' => '',
             'activity' => '',
             'hours' => [0, 0, 0, 0, 0, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
             'editable' => true,
         ];
@@ -396,7 +397,8 @@ class WeeklyHoursSheet
             return false;
         }
 
-        return WeeklyHoursFormatter::rowTotal($row['hours']) <= 0;
+        return WeeklyHoursFormatter::rowTotal($row['hours']) <= 0
+            && WeeklyHoursFormatter::rowTotal($row['overtime_hours'] ?? []) <= 0;
     }
 
     private function activityFromTasks(?array $tasks): string
