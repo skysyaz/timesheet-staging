@@ -11,6 +11,8 @@ use Filament\Forms;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Flex;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Model;
@@ -62,95 +64,101 @@ class ViewTimesheet extends ViewRecord
     {
         return $schema
             ->schema([
-                Section::make('Timesheet Details')
-                    ->icon('heroicon-o-document-text')
-                    ->schema([
-                        TextEntry::make('user.name')
-                            ->label('Employee')
-                            ->visible(fn () => ! auth()->user()->isEmployee()),
-                        TextEntry::make('project.name')
-                            ->label('Project')
-                            ->badge()
-                            ->color('primary')
-                            ->formatStateUsing(
-                                fn (?string $state, Model $record): string => ProjectDisplay::listLabel($record->project),
-                            ),
-                        TextEntry::make('project_role')
-                            ->label('Project Role')
-                            ->placeholder('—'),
-                        TextEntry::make('week_start')
-                            ->label('Week Starting')
-                            ->date('d/m/Y'),
-                        TextEntry::make('week_number')
-                            ->label('Week Number')
-                            ->getStateUsing(fn (Model $record) => 'Week ' . $record->week_start->isoWeek() . ', ' . $record->week_start->year),
-                        TextEntry::make('status')
-                            ->badge()
-                            ->color(fn (string $state) => match ($state) {
-                                'approved' => 'success',
-                                'pending_program_manager', 'pending_pm' => 'warning',
-                                'rejected' => 'danger',
-                                default => 'gray',
-                            })
-                            ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state))),
-                    ])->columns(3),
-
-                Section::make('Weekly Breakdown')
-                    ->icon('heroicon-o-calendar-days')
-                    ->schema([
-                        ViewEntry::make('hours_grid')
-                            ->view('filament.infolists.daily-hours-grid'),
-                        ViewEntry::make('overtime_hours_grid')
-                            ->view('filament.infolists.daily-overtime-hours-grid')
-                            ->visible(fn (Model $record) => collect($record->overtime_hours ?? [])->contains(fn ($hours) => (float) $hours > 0)),
-                        TextEntry::make('hours_summary')
-                            ->label('Totals')
-                            ->getStateUsing(fn (Model $record): string => sprintf(
-                                'Regular: %s h · Overtime: %s h · Total: %s h · Weighted: %s h',
-                                number_format($record->totalRegularHours(), 1),
-                                number_format($record->totalOvertimeHours(), 1),
-                                number_format($record->totalHours(), 1),
-                                number_format($record->weightedHours(), 1),
-                            )),
-                        ViewEntry::make('tasks_grid')
-                            ->view('filament.infolists.daily-tasks-grid')
-                            ->visible(fn (Model $record) => collect($record->tasks ?? [])->contains(fn ($task) => filled($task))),
-                    ]),
-
-                Section::make('Approval History')
-                    ->icon('heroicon-o-clipboard-document-check')
-                    ->schema([
-                        \Filament\Infolists\Components\RepeatableEntry::make('approvalLogs')
+                Flex::make([
+                    Group::make([
+                        Section::make('Timesheet Details')
+                            ->icon('heroicon-o-document-text')
                             ->schema([
                                 TextEntry::make('user.name')
-                                    ->label('By'),
-                                TextEntry::make('action')
-                                    ->label('Action')
+                                    ->label('Employee')
+                                    ->visible(fn () => ! auth()->user()->isEmployee()),
+                                TextEntry::make('project.name')
+                                    ->label('Project')
+                                    ->badge()
+                                    ->color('primary')
+                                    ->formatStateUsing(
+                                        fn (?string $state, Model $record): string => ProjectDisplay::listLabel($record->project),
+                                    ),
+                                TextEntry::make('project_role')
+                                    ->label('Project Role')
+                                    ->placeholder('—'),
+                                TextEntry::make('week_start')
+                                    ->label('Week Starting')
+                                    ->date('d/m/Y'),
+                                TextEntry::make('week_number')
+                                    ->label('Week Number')
+                                    ->getStateUsing(fn (Model $record) => 'Week ' . $record->week_start->isoWeek() . ', ' . $record->week_start->year),
+                                TextEntry::make('status')
                                     ->badge()
                                     ->color(fn (string $state) => match ($state) {
-                                        'submitted' => 'info',
-                                        'approved_pm', 'approved_program_manager' => 'success',
-                                        'rejected_pm', 'rejected_program_manager' => 'danger',
-                                        'reverted_to_draft' => 'warning',
+                                        'approved' => 'success',
+                                        'pending_program_manager', 'pending_pm' => 'warning',
+                                        'rejected' => 'danger',
                                         default => 'gray',
                                     })
                                     ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state))),
-                                TextEntry::make('comment')
-                                    ->visible(fn ($state) => filled($state)),
-                                TextEntry::make('created_at')
-                                    ->label('Date')
-                                    ->dateTime('M j, Y g:i A'),
-                            ])
-                            ->columns(4),
-                    ]),
+                            ])->columns(3),
 
-                Section::make('Notes')
-                    ->icon('heroicon-o-chat-bubble-left-ellipsis')
-                    ->schema([
-                        TextEntry::make('notes')
-                            ->hiddenLabel(),
-                    ])
-                    ->visible(fn (Model $record) => filled($record->notes)),
+                        Section::make('Approval History')
+                            ->icon('heroicon-o-clipboard-document-check')
+                            ->schema([
+                                \Filament\Infolists\Components\RepeatableEntry::make('approvalLogs')
+                                    ->schema([
+                                        TextEntry::make('user.name')
+                                            ->label('By'),
+                                        TextEntry::make('action')
+                                            ->label('Action')
+                                            ->badge()
+                                            ->color(fn (string $state) => match ($state) {
+                                                'submitted' => 'info',
+                                                'approved_pm', 'approved_program_manager' => 'success',
+                                                'rejected_pm', 'rejected_program_manager' => 'danger',
+                                                'reverted_to_draft' => 'warning',
+                                                default => 'gray',
+                                            })
+                                            ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state))),
+                                        TextEntry::make('comment')
+                                            ->visible(fn ($state) => filled($state)),
+                                        TextEntry::make('created_at')
+                                            ->label('Date')
+                                            ->dateTime('M j, Y g:i A'),
+                                    ])
+                                    ->columns(4),
+                            ]),
+
+                        Section::make('Notes')
+                            ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                            ->schema([
+                                TextEntry::make('notes')
+                                    ->hiddenLabel(),
+                            ])
+                            ->visible(fn (Model $record) => filled($record->notes)),
+                    ])->grow(),
+
+                    Group::make([
+                        Section::make('Weekly Breakdown')
+                            ->icon('heroicon-o-calendar-days')
+                            ->schema([
+                                ViewEntry::make('hours_grid')
+                                    ->view('filament.infolists.daily-hours-grid'),
+                                ViewEntry::make('overtime_hours_grid')
+                                    ->view('filament.infolists.daily-overtime-hours-grid')
+                                    ->visible(fn (Model $record) => collect($record->overtime_hours ?? [])->contains(fn ($hours) => (float) $hours > 0)),
+                                TextEntry::make('hours_summary')
+                                    ->label('Totals')
+                                    ->getStateUsing(fn (Model $record): string => sprintf(
+                                        'Regular: %s h · Overtime: %s h · Total: %s h · Weighted: %s h',
+                                        number_format($record->totalRegularHours(), 1),
+                                        number_format($record->totalOvertimeHours(), 1),
+                                        number_format($record->totalHours(), 1),
+                                        number_format($record->weightedHours(), 1),
+                                    )),
+                                ViewEntry::make('tasks_grid')
+                                    ->view('filament.infolists.daily-tasks-grid')
+                                    ->visible(fn (Model $record) => collect($record->tasks ?? [])->contains(fn ($task) => filled($task))),
+                            ]),
+                    ])->grow(),
+                ]),
             ]);
     }
 }
