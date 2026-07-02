@@ -158,7 +158,7 @@ class ViewTimesheet extends ViewRecord
                                     ->visible(fn (Model $record) => collect($record->tasks ?? [])->contains(fn ($task) => filled($task))),
                             ]),
                     ])->grow(),
-                ]),
+                ])->columnSpanFull(),
             ]);
     }
 }
