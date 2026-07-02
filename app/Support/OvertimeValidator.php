@@ -17,11 +17,13 @@ class OvertimeValidator
         $overtime = self::normalizeWeek($overtimeHours);
         $dailyThreshold = Setting::overtimeDailyThreshold();
         $weeklyThreshold = Setting::standardWeeklyHours();
+        $days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         $errors = [];
 
-        foreach ($regular as $index => $hours) {
-            $ot = $overtime[$index];
-            $day = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][$index];
+        for ($index = 0; $index < 7; $index++) {
+            $hours = $regular[$index] ?? 0.0;
+            $ot = $overtime[$index] ?? 0.0;
+            $day = $days[$index];
 
             if ($hours < 0 || $hours > 24 || $ot < 0 || $ot > 24) {
                 $errors["hours.{$index}"] = "{$day}: hours must be between 0 and 24.";
@@ -53,7 +55,7 @@ class OvertimeValidator
     {
         return array_map(
             fn (mixed $value): float => (float) (filled($value) ? $value : 0),
-            array_replace([0, 0, 0, 0, 0, 0, 0], array_values($hours)),
+            array_slice(array_replace([0, 0, 0, 0, 0, 0, 0], array_values($hours)), 0, 7),
         );
     }
 }
