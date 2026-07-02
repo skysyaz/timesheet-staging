@@ -1,4 +1,13 @@
 <x-filament-panels::page>
+    <style>
+        .corp-weekly-hours-ot-row td { border-top: 0; background: rgb(255 251 235 / 0.6); }
+        .dark .corp-weekly-hours-ot-row td { background: rgb(69 26 3 / 0.2); }
+        .corp-weekly-hours-ot-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: rgb(146 64 14); }
+        .dark .corp-weekly-hours-ot-label { color: rgb(252 211 77); }
+        .corp-weekly-hours-ot-row .corp-weekly-hours-hour-input { border-color: rgb(253 230 138 / 0.8); background: rgb(255 251 235 / 0.5); }
+        .corp-weekly-hours-total-row-ot td { background: rgb(255 251 235 / 0.8); font-weight: 600; }
+        .dark .corp-weekly-hours-total-row-ot td { background: rgb(69 26 3 / 0.3); }
+    </style>
     <div class="corp-weekly-hours">
         <div class="corp-weekly-hours-toolbar">
             <div class="corp-weekly-hours-week-nav">
