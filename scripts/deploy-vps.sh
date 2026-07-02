@@ -36,8 +36,7 @@ set -euo pipefail
 cd "$REMOTE_PATH"
 mkdir -p storage/framework/cache/tmp
 composer install --no-dev --optimize-autoloader --no-interaction
-chown -R www-data:www-data storage bootstrap/cache
-chmod -R 775 storage bootstrap/cache
+bash scripts/fix-app-permissions.sh "$REMOTE_PATH"
 sudo -u www-data php artisan migrate --force
 php scripts/generate-favicons.php
 if [[ -f .env ]]; then
@@ -52,10 +51,9 @@ sudo -u www-data php artisan view:clear
 sudo -u www-data php artisan filament:optimize-clear
 sudo -u www-data php artisan icons:clear
 sudo -u www-data php artisan config:cache
-sudo -u www-data php artisan route:cache
+sudo -u www-data php artisan route:clear
 sudo -u www-data php artisan view:cache
-chown -R www-data:www-data storage bootstrap/cache
-chmod -R 775 storage bootstrap/cache
+bash scripts/fix-app-permissions.sh "$REMOTE_PATH"
 systemctl restart timesheet-queue
 echo "Deploy complete."
 REMOTE
