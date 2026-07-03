@@ -4,6 +4,7 @@ namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
 use App\Models\BroadcastEmail;
+use App\Models\BroadcastTemplate;
 use App\Support\UserAccess;
 use App\Support\UserNotifier;
 use Filament\Actions;
@@ -27,6 +28,24 @@ class ListUsers extends ListRecords
                 ->modalDescription('Sends your message plus a per-user set-password link to every user visible to you. Pick a previous broadcast to reuse its message.')
                 ->visible(fn () => UserAccess::canManageUsers(auth()->user()))
                 ->form([
+                    Forms\Components\Select::make('template')
+                        ->label('Use a template')
+                        ->options(fn () => BroadcastTemplate::query()
+                            ->latest('id')
+                            ->get()
+                            ->mapWithKeys(fn (BroadcastTemplate $t) => [
+                                $t->id => "{$t->name} ({$t->subject})",
+                            ]))
+                        ->placeholder('— none —')
+                        ->dehydrated(false)
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, $state): void {
+                            $template = BroadcastTemplate::find((int) $state);
+                            if ($template) {
+                                $set('subject', $template->subject);
+                                $set('body', $template->body);
+                            }
+                        }),
                     Forms\Components\Select::make('reuse')
                         ->label('Reuse a previous broadcast')
                         ->options(fn () => BroadcastEmail::query()
