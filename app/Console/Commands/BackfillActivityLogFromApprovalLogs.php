@@ -3,7 +3,6 @@
 namespace App\Console\Commands;
 
 use App\Models\ApprovalLog;
-use App\Models\Timesheet;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Activity;
@@ -25,7 +24,7 @@ class BackfillActivityLogFromApprovalLogs extends Command
             ->orderBy('id')
             ->chunkById(200, function ($logs) use ($dryRun, &$imported, &$skipped): void {
                 foreach ($logs as $log) {
-                    $sourceKey = 'approval_log:' . $log->id;
+                    $sourceKey = 'approval_log:'.$log->id;
 
                     $exists = Activity::query()
                         ->where('properties->backfill_source', $sourceKey)
@@ -44,7 +43,7 @@ class BackfillActivityLogFromApprovalLogs extends Command
                     }
 
                     DB::transaction(function () use ($log, $sourceKey, &$imported): void {
-                        activity('admin')
+                        activity($log->user?->role ?? 'system')
                             ->causedBy($log->user)
                             ->performedOn($log->timesheet)
                             ->withProperties([
@@ -63,7 +62,7 @@ class BackfillActivityLogFromApprovalLogs extends Command
                 }
             });
 
-        $this->info(($dryRun ? 'Would import' : 'Imported') . " {$imported} audit entries ({$skipped} already present).");
+        $this->info(($dryRun ? 'Would import' : 'Imported')." {$imported} audit entries ({$skipped} already present).");
 
         return self::SUCCESS;
     }
@@ -78,7 +77,7 @@ class BackfillActivityLogFromApprovalLogs extends Command
             'rejected_program_manager' => 'Timesheet rejected by Program Manager',
             'rejected' => 'Timesheet rejected',
             'reverted' => 'Timesheet reverted to draft',
-            default => 'Timesheet workflow action: ' . str_replace('_', ' ', $action),
+            default => 'Timesheet workflow action: '.str_replace('_', ' ', $action),
         };
     }
 }

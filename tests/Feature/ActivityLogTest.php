@@ -46,7 +46,7 @@ class ActivityLogTest extends TestCase
             ->first();
 
         $this->assertNotNull($activity);
-        $this->assertSame('admin', $activity->log_name);
+        $this->assertSame('employee', $activity->log_name);
 
         $encoded = json_encode($activity->attribute_changes ?? $activity->properties);
 

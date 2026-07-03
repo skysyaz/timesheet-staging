@@ -14,11 +14,16 @@ class AuditLogger
         string $description,
         ?Model $subject = null,
         array $properties = [],
-        string $logName = 'admin',
+        ?string $logName = null,
     ): void {
         if (! config('activitylog.enabled')) {
             return;
         }
+
+        // ponytail: log_name doubles as the actor's role so the Audit Log page's
+        // "Log" badge reflects who acted (employee/project_admin/admin/...),
+        // not a hardcoded "admin". Callers may still pass an explicit logName.
+        $logName ??= Auth::user()?->role ?? 'system';
 
         $activity = activity($logName)
             ->causedBy(Auth::user())
