@@ -9,9 +9,9 @@ use App\Support\UserAccess;
 use App\Support\UserNotifier;
 use Filament\Actions;
 use Filament\Forms;
-use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
+use Filament\Schemas\Components\Utilities\Set;
 
 class ListUsers extends ListRecords
 {
