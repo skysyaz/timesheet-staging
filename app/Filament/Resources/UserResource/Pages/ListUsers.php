@@ -3,10 +3,12 @@
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
+use App\Models\BroadcastEmail;
 use App\Support\UserAccess;
 use App\Support\UserNotifier;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 
@@ -22,9 +24,28 @@ class ListUsers extends ListRecords
                 ->label('Broadcast email')
                 ->icon('heroicon-o-envelope')
                 ->modalHeading('Broadcast activation email')
-                ->modalDescription('Sends your message plus a per-user set-password link to every user visible to you.')
+                ->modalDescription('Sends your message plus a per-user set-password link to every user visible to you. Pick a previous broadcast to reuse its message.')
                 ->visible(fn () => UserAccess::canManageUsers(auth()->user()))
                 ->form([
+                    Forms\Components\Select::make('reuse')
+                        ->label('Reuse a previous broadcast')
+                        ->options(fn () => BroadcastEmail::query()
+                            ->latest('id')
+                            ->limit(50)
+                            ->get()
+                            ->mapWithKeys(fn (BroadcastEmail $b) => [
+                                $b->id => "{$b->subject} — {$b->created_at->format('Y-m-d')} ({$b->recipient_count} recipients)",
+                            ]))
+                        ->placeholder('— start fresh —')
+                        ->dehydrated(false)
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, $state): void {
+                            $broadcast = BroadcastEmail::find((int) $state);
+                            if ($broadcast) {
+                                $set('subject', $broadcast->subject);
+                                $set('body', $broadcast->body);
+                            }
+                        }),
                     Forms\Components\TextInput::make('subject')
                         ->required()
                         ->maxLength(255),
@@ -35,7 +56,7 @@ class ListUsers extends ListRecords
                 ->action(function (array $data): void {
                     $users = static::getResource()::getEloquentQuery()->get();
 
-                    UserNotifier::sendBroadcast($users, $data['subject'], $data['body']);
+                    UserNotifier::sendBroadcast($users, $data['subject'], $data['body'], auth()->user());
 
                     Notification::make()
                         ->success()

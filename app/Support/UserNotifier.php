@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\BroadcastEmail;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\UserActivationNotification;
@@ -39,7 +40,7 @@ class UserNotifier
     /**
      * @param  Collection<int, User>  $users
      */
-    public static function sendBroadcast(Collection $users, string $subject, string $body): void
+    public static function sendBroadcast(Collection $users, string $subject, string $body, ?User $sender = null): void
     {
         $users = $users->filter()->unique('id');
 
@@ -64,6 +65,15 @@ class UserNotifier
             ), 'broadcast');
 
             $sent++;
+        }
+
+        if ($sender !== null) {
+            BroadcastEmail::create([
+                'sender_id' => $sender->id,
+                'subject' => $subject,
+                'body' => $body,
+                'recipient_count' => $sent,
+            ]);
         }
 
         Log::info('User broadcast dispatched', ['count' => $sent]);

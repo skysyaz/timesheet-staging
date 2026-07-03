@@ -69,6 +69,33 @@ class UserActivationTest extends TestCase
         }
     }
 
+    public function test_broadcast_records_history_with_sender_and_recipient_count(): void
+    {
+        Notification::fake();
+
+        $admin = User::factory()->admin()->create();
+        $employees = User::factory()->count(2)->create(['role' => 'employee']);
+
+        Livewire::actingAs($admin)
+            ->test(ListUsers::class)
+            ->callAction('broadcastEmail', [
+                'subject' => 'Welcome back',
+                'body' => 'Set your password using the link below.',
+            ])
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('broadcast_emails', [
+            'sender_id' => $admin->id,
+            'subject' => 'Welcome back',
+            'body' => 'Set your password using the link below.',
+            'recipient_count' => 3, // admin sees all users: itself + 2 employees
+        ]);
+
+        foreach ($employees as $employee) {
+            Notification::assertSentTo($employee, UserActivationNotification::class);
+        }
+    }
+
     public function test_notifications_are_skipped_when_email_disabled(): void
     {
         Notification::fake();
