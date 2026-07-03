@@ -4,11 +4,11 @@ namespace App\Notifications;
 
 use App\Models\User;
 use App\Support\Concerns\QueuesTimesheetNotification;
+use Filament\Facades\Filament;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Contracts\Queue\ShouldQueueAfterCommit;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
-use Illuminate\Support\Facades\Filament;
 
 class UserActivationNotification extends Notification implements ShouldQueue, ShouldQueueAfterCommit
 {

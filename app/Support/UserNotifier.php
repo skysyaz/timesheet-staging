@@ -5,9 +5,9 @@ namespace App\Support;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\UserActivationNotification;
-use Illuminate\Notifications\Notification as NotificationFacade;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Facades\Password;
 
 class UserNotifier
