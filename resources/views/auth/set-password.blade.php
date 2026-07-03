@@ -13,6 +13,7 @@
         label { display: block; font-size: .85rem; font-weight: 600; margin: 0 0 .35rem; }
         input { width: 100%; box-sizing: border-box; padding: .6rem .75rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .95rem; background: #fff; color: #1f2937; }
         input:focus { outline: 2px solid #0891b2; border-color: #0891b2; }
+        input[readonly] { background: #f3f4f6; color: #6b7280; cursor: not-allowed; }
         .field { margin-bottom: 1rem; }
         button { width: 100%; padding: .65rem; background: #0891b2; color: #fff; border: 0; border-radius: 8px; font-size: .95rem; font-weight: 600; cursor: pointer; }
         button:hover { background: #0e7490; }
@@ -45,12 +46,12 @@
 
             <div class="field">
                 <label for="email">Email</label>
-                <input id="email" type="email" name="email" value="{{ old('email', $email) }}" required autofocus>
+                <input id="email" type="email" name="email" value="{{ old('email', $email) }}" readonly>
             </div>
 
             <div class="field">
                 <label for="password">New password</label>
-                <input id="password" type="password" name="password" required>
+                <input id="password" type="password" name="password" required autofocus>
             </div>
 
             <div class="field">
