@@ -1,9 +1,17 @@
 <?php
 
+use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\FaviconController;
 use App\Http\Controllers\PdfController;
 use App\Http\Controllers\UptimeHeartbeatController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/set-password/{token}', [SetPasswordController::class, 'show'])
+    ->middleware('throttle:10,1')
+    ->name('password.set');
+Route::post('/set-password', [SetPasswordController::class, 'store'])
+    ->middleware('throttle:10,1')
+    ->name('password.update');
 
 Route::permanentRedirect('/admin/login', '/login');
 Route::permanentRedirect('/admin', '/');
@@ -27,10 +35,10 @@ Route::get('/.well-known/security.txt', function () {
     $canonical = url('/.well-known/security.txt');
 
     $body = implode("\n", [
-        'Contact: mailto:' . $contact,
-        'Expires: ' . $expires,
+        'Contact: mailto:'.$contact,
+        'Expires: '.$expires,
         'Preferred-Languages: en',
-        'Canonical: ' . $canonical,
+        'Canonical: '.$canonical,
         'Policy: https://skysyaz.my/security-policy',
     ]);
 

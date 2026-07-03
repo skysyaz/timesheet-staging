@@ -7,8 +7,15 @@ use App\Filament\Concerns\ConfiguresTableToolbar;
 use App\Filament\Resources\UserResource\Pages;
 use App\Models\User;
 use App\Support\UserAccess;
+use App\Support\UserNotifier;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -21,15 +28,18 @@ class UserResource extends Resource
     use ConfiguresTableToolbar;
 
     protected static ?string $model = User::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-users';
+
     protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     protected static ?int $navigationSort = 1;
 
     public static function form(Schema $schema): Schema
     {
         return $schema
             ->schema([
-                \Filament\Schemas\Components\Section::make()->schema([
+                Section::make()->schema([
                     Forms\Components\TextInput::make('name')
                         ->required()
                         ->maxLength(255),
@@ -91,14 +101,20 @@ class UserResource extends Resource
             ->actions([
                 ResetUserPasswordAction::make()
                     ->visible(fn (User $record) => static::canEdit($record)),
-                \Filament\Actions\EditAction::make()
+                Action::make('sendActivation')
+                    ->label('Send activation email')
+                    ->icon('heroicon-o-envelope')
+                    ->requiresConfirmation()
+                    ->visible(fn (User $record) => static::canEdit($record))
+                    ->action(fn (User $record) => UserNotifier::sendActivation($record, null)),
+                EditAction::make()
                     ->visible(fn (User $record) => static::canEdit($record)),
-                \Filament\Actions\DeleteAction::make()
+                DeleteAction::make()
                     ->visible(fn (User $record) => static::canDelete($record)),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
+                BulkActionGroup::make([
+                    DeleteBulkAction::make()
                         ->visible(fn () => auth()->user()?->isAdmin() ?? false),
                 ]),
             ]));
