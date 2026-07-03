@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\ApprovalLog;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\Timesheet;
@@ -77,14 +76,14 @@ class DatabaseSeeder extends Seeder
         Setting::create(['key' => 'standardWeeklyHours', 'value' => 40]);
 
         $tsData = [
-            ['user_id' => 1, 'project_id' => 1, 'week_start' => $twoWeeksAgo, 'hours' => [8,8,8,8,8,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'approved', 'notes' => 'ERP module integration complete.'],
-            ['user_id' => 4, 'project_id' => 2, 'week_start' => $twoWeeksAgo, 'hours' => [8,7,8,8,7,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'approved', 'notes' => 'Mobile app sprint.'],
-            ['user_id' => 1, 'project_id' => 1, 'week_start' => $lastMonday, 'hours' => [8,8,8,8,8,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'approved', 'notes' => 'ERP reports module.'],
-            ['user_id' => 4, 'project_id' => 2, 'week_start' => $lastMonday, 'hours' => [8,7,8,8,7,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'pending_program_manager', 'notes' => 'Mobile app UI development sprint.'],
-            ['user_id' => 1, 'project_id' => 3, 'week_start' => $lastMonday, 'hours' => [8,8,8,9,9,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'pending_pm', 'notes' => 'API endpoints for payment gateway.'],
-            ['user_id' => 5, 'project_id' => 2, 'week_start' => $lastMonday, 'hours' => [8,8,8,8,6,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'pending_pm', 'notes' => 'Mobile app testing and QA.'],
-            ['user_id' => 1, 'project_id' => 1, 'week_start' => $thisMonday, 'hours' => [8,8,0,0,0,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'draft', 'notes' => 'Starting new module.'],
-            ['user_id' => 4, 'project_id' => 3, 'week_start' => $thisMonday, 'hours' => [8,8,8,0,0,0,0], 'overtime_hours' => [0,0,0,0,0,0,0], 'status' => 'rejected', 'notes' => 'API optimization work.'],
+            ['user_id' => 1, 'project_id' => 1, 'week_start' => $twoWeeksAgo, 'hours' => [8, 8, 8, 8, 8, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'approved', 'notes' => 'ERP module integration complete.'],
+            ['user_id' => 4, 'project_id' => 2, 'week_start' => $twoWeeksAgo, 'hours' => [8, 7, 8, 8, 7, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'approved', 'notes' => 'Mobile app sprint.'],
+            ['user_id' => 1, 'project_id' => 1, 'week_start' => $lastMonday, 'hours' => [8, 8, 8, 8, 8, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'approved', 'notes' => 'ERP reports module.'],
+            ['user_id' => 4, 'project_id' => 2, 'week_start' => $lastMonday, 'hours' => [8, 7, 8, 8, 7, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'pending_program_manager', 'notes' => 'Mobile app UI development sprint.'],
+            ['user_id' => 1, 'project_id' => 3, 'week_start' => $lastMonday, 'hours' => [8, 8, 8, 9, 9, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'pending_pm', 'notes' => 'API endpoints for payment gateway.'],
+            ['user_id' => 5, 'project_id' => 2, 'week_start' => $lastMonday, 'hours' => [8, 8, 8, 8, 6, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'pending_pm', 'notes' => 'Mobile app testing and QA.'],
+            ['user_id' => 1, 'project_id' => 1, 'week_start' => $thisMonday, 'hours' => [8, 8, 0, 0, 0, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'draft', 'notes' => 'Starting new module.'],
+            ['user_id' => 4, 'project_id' => 3, 'week_start' => $thisMonday, 'hours' => [8, 8, 8, 0, 0, 0, 0], 'overtime_hours' => [0, 0, 0, 0, 0, 0, 0], 'status' => 'rejected', 'notes' => 'API optimization work.'],
         ];
 
         $logData = [
@@ -113,7 +112,9 @@ class DatabaseSeeder extends Seeder
 
         foreach ($logData as $log) {
             $ts = Timesheet::find($tsIds[$log['ts_idx']]);
-            if (!$ts) continue;
+            if (! $ts) {
+                continue;
+            }
             $ts->approvalLogs()->create([
                 'user_id' => $log['user_id'],
                 'action' => $log['action'],
@@ -122,5 +123,7 @@ class DatabaseSeeder extends Seeder
                 'updated_at' => (clone $ts->week_start)->addDays($log['offset']),
             ]);
         }
+
+        $this->call(BroadcastTemplateSeeder::class);
     }
 }

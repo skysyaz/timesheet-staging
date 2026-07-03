@@ -25,7 +25,8 @@ class ListUsers extends ListRecords
                 ->label('Broadcast email')
                 ->icon('heroicon-o-envelope')
                 ->modalHeading('Broadcast activation email')
-                ->modalDescription('Sends your message plus a per-user set-password link to every user visible to you. Pick a previous broadcast to reuse its message.')
+                ->modalDescription('Sends your message plus a set-password link to every user visible to you.')
+                ->stickyModalHeader()
                 ->visible(fn () => UserAccess::canManageUsers(auth()->user()))
                 ->form([
                     Forms\Components\Select::make('template')
@@ -70,7 +71,7 @@ class ListUsers extends ListRecords
                         ->maxLength(255),
                     Forms\Components\Textarea::make('body')
                         ->required()
-                        ->rows(8),
+                        ->rows(5),
                 ])
                 ->action(function (array $data): void {
                     $users = static::getResource()::getEloquentQuery()->get();
