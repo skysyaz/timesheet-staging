@@ -5,9 +5,13 @@ namespace App\Filament\Resources\ProjectResource\Pages;
 use App\Filament\Resources\ProjectResource;
 use Filament\Actions;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\ViewRecord;
+use Filament\Schemas\Components\Flex;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\TextSize;
 
 class ViewProject extends ViewRecord
 {
@@ -33,6 +37,7 @@ class ViewProject extends ViewRecord
         return $schema
             ->schema([
                 Section::make('Project details')
+                    ->icon('heroicon-o-folder-open')
                     ->schema([
                         TextEntry::make('code')
                             ->badge()
@@ -54,6 +59,7 @@ class ViewProject extends ViewRecord
                     ])
                     ->columns(3),
                 Section::make('Timeline & schedule')
+                    ->icon('heroicon-o-calendar-days')
                     ->schema([
                         TextEntry::make('start_date')
                             ->label('Start date')
@@ -97,43 +103,56 @@ class ViewProject extends ViewRecord
                     ])
                     ->columns(3),
                 Section::make('Approvers')
+                    ->icon('heroicon-o-shield-check')
                     ->schema([
                         TextEntry::make('projectManager.name')
-                            ->label('Project Manager'),
+                            ->label('Project Manager')
+                            ->placeholder('Not assigned'),
                         TextEntry::make('programManager.name')
-                            ->label('Program Manager'),
+                            ->label('Program Manager')
+                            ->placeholder('Not assigned'),
                     ])
                     ->columns(2),
-                Section::make('Team members')
-                    ->schema([
-                        TextEntry::make('members_list')
-                            ->label('Assigned members')
-                            ->state(fn ($record) => $record->members
-                                ->sortBy('name')
-                                ->map(fn ($member) => "{$member->name} — {$member->pivot->assigned_role}")
-                                ->join("\n") ?: '—')
-                            ->markdown()
-                            ->columnSpanFull(),
-                    ]),
-                Section::make('Member contributions')
-                    ->schema([
-                        TextEntry::make('member_contributions')
-                            ->label('Hours by member')
-                            ->state(function ($record): string {
-                                $rows = $record->memberContributions();
-
-                                if ($rows === []) {
-                                    return '—';
-                                }
-
-                                return collect($rows)
-                                    ->map(fn (array $row): string => "{$row['name']} ({$row['role']}): {$row['hours']}h")
-                                    ->join("\n");
-                            })
-                            ->markdown()
-                            ->columnSpanFull(),
-                    ]),
+                Flex::make([
+                    Group::make([
+                        Section::make('Team members')
+                            ->icon('heroicon-o-users')
+                            ->afterHeader([
+                                TextEntry::make('team_members_count')
+                                    ->hiddenLabel()
+                                    ->state(fn ($record): string => $record->members()->count().' assigned')
+                                    ->color('gray')
+                                    ->size(TextSize::Small),
+                            ])
+                            ->schema([
+                                ViewEntry::make('team_members')
+                                    ->hiddenLabel()
+                                    ->view('filament.infolists.project-team-members')
+                                    ->columnSpanFull(),
+                            ]),
+                    ])->grow(),
+                    Group::make([
+                        Section::make('Member contributions')
+                            ->icon('heroicon-o-chart-bar')
+                            ->afterHeader([
+                                TextEntry::make('member_contributions_count')
+                                    ->hiddenLabel()
+                                    ->state(fn ($record): string => count($record->memberContributions()).' contributors')
+                                    ->color('gray')
+                                    ->size(TextSize::Small),
+                            ])
+                            ->schema([
+                                ViewEntry::make('member_contributions')
+                                    ->hiddenLabel()
+                                    ->view('filament.infolists.project-member-contributions')
+                                    ->columnSpanFull(),
+                            ]),
+                    ])->grow(),
+                ])
+                    ->from('md')
+                    ->columnSpanFull(),
                 Section::make('Record')
+                    ->icon('heroicon-o-clock')
                     ->schema([
                         TextEntry::make('creator.name')
                             ->label('Created by')

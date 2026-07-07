@@ -16,7 +16,7 @@ class EditProject extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make()
+            ProjectResource::configureProjectDeleteAction(Actions\DeleteAction::make())
                 ->visible(fn () => auth()->user()?->isAdmin() ?? false),
         ];
     }

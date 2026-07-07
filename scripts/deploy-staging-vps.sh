@@ -18,7 +18,10 @@ echo "Building assets..."
 (cd "$LOCAL_PATH" && npm run build)
 
 echo "Syncing files to staging ($REMOTE_PATH)..."
-SSHPASS="$SSHPASS" sshpass -e rsync -az --delete \
+# Run rsync from inside $LOCAL_PATH using "./" as the source so Windows
+# absolute paths (which contain a drive-letter colon) aren't mistaken for
+# remote host specs, and the source stays a single token if the path has spaces.
+(cd "$LOCAL_PATH" && SSHPASS="$SSHPASS" sshpass -e rsync -az --delete \
   --exclude '.git' \
   --exclude 'node_modules' \
   --exclude 'vendor' \
@@ -27,7 +30,7 @@ SSHPASS="$SSHPASS" sshpass -e rsync -az --delete \
   --exclude '.phpunit.result.cache' \
   --exclude 'tests' \
   -e "ssh -o StrictHostKeyChecking=no" \
-  "$LOCAL_PATH/" "$HOST:$REMOTE_PATH/"
+  ./ "$HOST:$REMOTE_PATH/")
 
 echo "Running remote staging deploy steps..."
 SSHPASS="$SSHPASS" sshpass -e ssh -o StrictHostKeyChecking=no "$HOST" "bash -s" <<REMOTE

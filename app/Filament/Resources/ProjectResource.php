@@ -15,6 +15,11 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
@@ -246,17 +251,28 @@ class ProjectResource extends Resource
                 Tables\Filters\SelectFilter::make('project_type_id')
                     ->label('Project type')
                     ->relationship('projectType', 'name'),
+                Tables\Filters\TrashedFilter::make()
+                    ->visible(fn () => auth()->user()?->isAdmin() ?? false),
             ])
             ->actions([
                 \Filament\Actions\ViewAction::make(),
                 \Filament\Actions\EditAction::make()
                     ->visible(fn (Project $record) => static::canEdit($record)),
-                \Filament\Actions\DeleteAction::make()
-                    ->visible(fn () => auth()->user()?->isAdmin() ?? false),
+                static::configureProjectDeleteAction(DeleteAction::make())
+                    ->visible(fn (Project $record): bool => ! $record->trashed() && (auth()->user()?->isAdmin() ?? false)),
+                RestoreAction::make()
+                    ->visible(fn (Project $record): bool => $record->trashed() && (auth()->user()?->isAdmin() ?? false)),
+                ForceDeleteAction::make()
+                    ->visible(fn (Project $record): bool => $record->trashed()
+                        && (auth()->user()?->isAdmin() ?? false)
+                        && $record->canBeForceDeleted())
+                    ->modalDescription('This permanently removes the project. It can only be done when no timesheets exist.'),
             ])
             ->bulkActions([
                 \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make()
+                    static::configureProjectDeleteAction(DeleteBulkAction::make())
+                        ->visible(fn () => auth()->user()?->isAdmin() ?? false),
+                    RestoreBulkAction::make()
                         ->visible(fn () => auth()->user()?->isAdmin() ?? false),
                 ]),
             ]));
@@ -288,6 +304,18 @@ class ProjectResource extends Resource
         return auth()->user()?->isAdmin() ?? false;
     }
 
+    public static function canRestore(Model $record): bool
+    {
+        return auth()->user()?->isAdmin() ?? false;
+    }
+
+    public static function canForceDelete(Model $record): bool
+    {
+        return (auth()->user()?->isAdmin() ?? false)
+            && $record instanceof Project
+            && $record->canBeForceDeleted();
+    }
+
     public static function getRelations(): array
     {
         return [];
@@ -313,5 +341,21 @@ class ProjectResource extends Resource
             'project_manager',
             'program_manager',
         ], true);
+    }
+
+    public static function configureProjectDeleteAction(DeleteAction | DeleteBulkAction $action): DeleteAction | DeleteBulkAction
+    {
+        $action
+            ->label('Move to trash')
+            ->modalHeading('Move project to trash')
+            ->successNotificationTitle('Project moved to trash');
+
+        if ($action instanceof DeleteAction) {
+            $action->modalDescription(fn (Project $record) => $record->trashDeletionMessage());
+        } else {
+            $action->modalDescription('Selected projects will be hidden from active lists. Timesheet records are kept and projects can be restored from the trash filter.');
+        }
+
+        return $action;
     }
 }
