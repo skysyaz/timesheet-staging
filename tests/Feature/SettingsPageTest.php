@@ -49,6 +49,32 @@ class SettingsPageTest extends TestCase
         $this->assertSame(2.0, Setting::overtimeRate());
     }
 
+    public function test_clearing_overtime_daily_threshold_removes_setting(): void
+    {
+        Setting::create(['key' => 'standardWeeklyHours', 'value' => 40]);
+        Setting::create(['key' => 'requireProgramManagerApproval', 'value' => true]);
+        Setting::create(['key' => 'emailNotifications', 'value' => true]);
+        Setting::create(['key' => 'overtimeDailyThreshold', 'value' => 8]);
+        Setting::create(['key' => 'overtimeRate', 'value' => 1.5]);
+
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        Livewire::actingAs($admin)
+            ->test(\App\Filament\Pages\Settings::class)
+            ->fillForm([
+                'standardWeeklyHours' => 40,
+                'requireProgramManagerApproval' => true,
+                'emailNotifications' => true,
+                'overtimeDailyThreshold' => null,
+                'overtimeRate' => 1.5,
+            ])
+            ->call('save')
+            ->assertNotified();
+
+        $this->assertNull(Setting::overtimeDailyThreshold());
+        $this->assertDatabaseMissing('settings', ['key' => 'overtimeDailyThreshold']);
+    }
+
     public function test_non_admin_cannot_access_settings_page(): void
     {
         $employee = User::factory()->create(['role' => 'employee']);

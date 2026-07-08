@@ -26,6 +26,12 @@ class Setting extends Model
 
     public static function setValue(string $key, mixed $value): void
     {
+        if ($value === null) {
+            static::where('key', $key)->delete();
+
+            return;
+        }
+
         static::updateOrCreate(
             ['key' => $key],
             ['value' => $value]
