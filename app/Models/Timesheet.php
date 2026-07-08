@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\LogsAuditableChanges;
-use App\Models\Setting;
 use Illuminate\Database\Eloquent\Model;
 
 class Timesheet extends Model
@@ -174,8 +173,21 @@ class Timesheet extends Model
         return in_array($this->status, ['draft', 'rejected'], true);
     }
 
+    public function isFutureWeek(): bool
+    {
+        // A week whose Monday has not arrived yet is a future week. Drafting
+        // ahead is allowed, but hours not yet worked cannot be verified, so
+        // submission and approval of a future week are blocked. The current
+        // (in-progress) week is not a future week and remains submittable.
+        return $this->week_start !== null && $this->week_start->isFuture();
+    }
+
     public function canBeApprovedBy(User $user): bool
     {
+        if ($this->isFutureWeek()) {
+            return false;
+        }
+
         $this->loadMissing('project');
         $project = $this->project;
 

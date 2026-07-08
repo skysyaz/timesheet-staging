@@ -13,6 +13,7 @@ use App\Notifications\TimesheetSubmittedNotification;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -163,5 +164,38 @@ class TimesheetPmSubmissionTest extends TestCase
 
         $this->assertSame('pending_program_manager', $second->fresh()->status);
         $this->assertSame('Project Manager', $second->fresh()->project_role);
+    }
+
+    public function test_future_week_timesheet_cannot_be_approved_by_pm(): void
+    {
+        $nextMonday = $this->monday->copy()->addWeek();
+        $timesheet = Timesheet::create([
+            'user_id' => $this->pm->id,
+            'project_id' => $this->project->id,
+            'project_role' => 'Project Manager',
+            'week_start' => $nextMonday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'pending_pm',
+        ]);
+
+        $this->actingAs($this->pm);
+        $this->assertFalse($timesheet->canBeApprovedBy($this->pm));
+
+        try {
+            TimesheetResource::handleApprove($timesheet, 'go');
+            $this->fail('Expected ValidationException for approving a future-week timesheet.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString(
+                'has not started yet',
+                collect($exception->validator->errors()->get('week_start'))->first(),
+            );
+        }
+
+        $this->assertSame('pending_pm', $timesheet->fresh()->status);
+        $this->assertDatabaseMissing('approval_logs', [
+            'timesheet_id' => $timesheet->id,
+            'action' => 'approved_pm',
+        ]);
     }
 }
