@@ -18,10 +18,15 @@ use App\Support\ProjectDisplay;
 use App\Support\TimesheetAccess;
 use App\Support\TimesheetNotifier;
 use Carbon\Carbon;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -35,8 +40,11 @@ class TimesheetResource extends Resource
     use ConfiguresTableToolbar;
 
     protected static ?string $model = Timesheet::class;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
+
     protected static string|\UnitEnum|null $navigationGroup = 'Time Tracking';
+
     protected static ?int $navigationSort = 1;
 
     public static function getNavigationLabel(): string
@@ -50,7 +58,7 @@ class TimesheetResource extends Resource
     {
         return $schema
             ->schema([
-                \Filament\Schemas\Components\Section::make('Project')
+                Section::make('Project')
                     ->description('Choose where you worked and your role on the project.')
                     ->icon('heroicon-o-briefcase')
                     ->schema([
@@ -101,7 +109,7 @@ class TimesheetResource extends Resource
                     ])
                     ->columns(2),
 
-                \Filament\Schemas\Components\Section::make('Date')
+                Section::make('Date')
                     ->description('Pick the day you want to log. The form opens on that day automatically.')
                     ->icon('heroicon-o-calendar')
                     ->schema([
@@ -147,7 +155,7 @@ class TimesheetResource extends Resource
                     ->visible(fn (Get $get): bool => filled($get('project_id')) && filled($get('project_role')))
                     ->columns(2),
 
-                \Filament\Schemas\Components\Section::make('Time entry')
+                Section::make('Time entry')
                     ->description('Fill in hours and activity for the selected day, then move through the week.')
                     ->icon('heroicon-o-clock')
                     ->schema([
@@ -179,7 +187,7 @@ class TimesheetResource extends Resource
                 Tables\Columns\TextColumn::make('user.name')
                     ->searchable()
                     ->sortable()
-                    ->visible(fn() => $user && !$user->isEmployee()),
+                    ->visible(fn () => $user && ! $user->isEmployee()),
                 Tables\Columns\TextColumn::make('project.name')
                     ->label('Project')
                     ->badge()
@@ -207,20 +215,20 @@ class TimesheetResource extends Resource
                     ->sortable(),
                 Tables\Columns\TextColumn::make('week_number')
                     ->label('Week')
-                    ->getStateUsing(fn(Timesheet $record) => $record->week_start->isoWeek()),
+                    ->getStateUsing(fn (Timesheet $record) => $record->week_start->isoWeek()),
                 Tables\Columns\TextColumn::make('total_hours')
                     ->label('Total Hours')
-                    ->getStateUsing(fn(Timesheet $record) => $record->totalHours() . 'h')
+                    ->getStateUsing(fn (Timesheet $record) => $record->totalHours().'h')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn(string $state) => match ($state) {
+                    ->color(fn (string $state) => match ($state) {
                         'approved' => 'success',
                         'pending_program_manager', 'pending_pm' => 'warning',
                         'rejected' => 'danger',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn(string $state) => ucwords(str_replace('_', ' ', $state)))
+                    ->formatStateUsing(fn (string $state) => ucwords(str_replace('_', ' ', $state)))
                     ->sortable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
@@ -259,16 +267,16 @@ class TimesheetResource extends Resource
                     ->visible(fn () => $user && ! $user->isEmployee()),
             ])
             ->actions([
-                \Filament\Actions\ViewAction::make(),
-                \Filament\Actions\EditAction::make()
+                ViewAction::make(),
+                EditAction::make()
                     ->visible(fn (Timesheet $record) => auth()->user() && TimesheetAccess::userCanEditTimesheet(auth()->user(), $record)),
-                \Filament\Actions\Action::make('printPdf')
+                Action::make('printPdf')
                     ->label('Print')
                     ->icon('heroicon-o-printer')
                     ->color('gray')
                     ->url(fn (Timesheet $record) => route('pdf.weekly', $record))
                     ->openUrlInNewTab(),
-                \Filament\Actions\Action::make('submit')
+                Action::make('submit')
                     ->label('Submit')
                     ->icon('heroicon-o-paper-airplane')
                     ->color('primary')
@@ -280,7 +288,7 @@ class TimesheetResource extends Resource
                         try {
                             static::submitTimesheet($record);
                         } catch (ValidationException $exception) {
-                            \Filament\Notifications\Notification::make()
+                            Notification::make()
                                 ->title('Cannot submit timesheet')
                                 ->body(collect($exception->errors())->flatten()->first() ?? 'Please complete all required fields.')
                                 ->danger()
@@ -289,17 +297,17 @@ class TimesheetResource extends Resource
                             return;
                         }
 
-                        \Filament\Notifications\Notification::make()
+                        Notification::make()
                             ->title('Timesheet submitted')
                             ->body(static::submitSuccessMessage(auth()->user(), $record->fresh(['project'])))
                             ->success()
                             ->send();
                     }),
-                \Filament\Actions\Action::make('approve')
+                Action::make('approve')
                     ->label('Approve')
                     ->icon('heroicon-o-check')
                     ->color('success')
-                    ->visible(fn(Timesheet $record) => static::canApprove($record))
+                    ->visible(fn (Timesheet $record) => static::canApprove($record))
                     ->form([
                         Forms\Components\Textarea::make('comment')
                             ->label('Comment (optional)')
@@ -308,7 +316,7 @@ class TimesheetResource extends Resource
                     ->action(function (Timesheet $record, array $data) {
                         static::handleApprove($record, $data['comment'] ?? '');
                     }),
-                \Filament\Actions\Action::make('reject')
+                Action::make('reject')
                     ->label('Reject')
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
@@ -322,7 +330,7 @@ class TimesheetResource extends Resource
                     ->action(function (Timesheet $record, array $data) {
                         static::handleReject($record, $data['comment']);
                     }),
-                \Filament\Actions\Action::make('revertToDraft')
+                Action::make('revertToDraft')
                     ->label('Revert to Draft')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('warning')
@@ -363,7 +371,8 @@ class TimesheetResource extends Resource
     {
         return $user instanceof User
             && $record->isSubmittable()
-            && $record->user_id === $user->id;
+            && $record->user_id === $user->id
+            && ! $record->isFutureWeek();
     }
 
     /**
@@ -442,6 +451,12 @@ class TimesheetResource extends Resource
     public static function submitTimesheet(Timesheet $record): void
     {
         $user = auth()->user();
+
+        if ($record->isFutureWeek()) {
+            throw ValidationException::withMessages([
+                'week_start' => 'This week has not started yet. Submit your timesheet once the week has begun.',
+            ]);
+        }
 
         if (! static::canUserSubmitTimesheet($user, $record)) {
             abort(403, 'You are not allowed to submit this timesheet.');
@@ -540,6 +555,12 @@ class TimesheetResource extends Resource
     public static function handleApprove(Timesheet $record, string $comment): void
     {
         $user = auth()->user();
+
+        if ($record->isFutureWeek()) {
+            throw ValidationException::withMessages([
+                'week_start' => 'This week has not started yet; it cannot be approved until the week has begun.',
+            ]);
+        }
 
         if ($record->isPendingPm() && $record->canBeApprovedBy($user)) {
             $requireProgramManager = Setting::programManagerApprovalRequired();
@@ -641,7 +662,7 @@ class TimesheetResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof \App\Models\User
+        return $user instanceof User
             && $record instanceof Timesheet
             && TimesheetAccess::userCanEditTimesheet($user, $record);
     }
@@ -650,7 +671,7 @@ class TimesheetResource extends Resource
     {
         $user = auth()->user();
 
-        return $user instanceof \App\Models\User
+        return $user instanceof User
             && $record instanceof Timesheet
             && TimesheetAccess::userCanViewTimesheet($user, $record);
     }

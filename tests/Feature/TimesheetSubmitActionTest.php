@@ -117,4 +117,46 @@ class TimesheetSubmitActionTest extends TestCase
 
         $this->assertFalse(TimesheetResource::canUserSubmitTimesheet($otherEmployee, $timesheet));
     }
+
+    public function test_future_week_timesheet_is_not_submittable(): void
+    {
+        $nextMonday = $this->monday->copy()->addWeek();
+        $timesheet = $this->draftTimesheet(['week_start' => $nextMonday]);
+
+        $this->assertTrue($timesheet->isFutureWeek());
+        $this->assertFalse(TimesheetResource::canUserSubmitTimesheet($this->employee, $timesheet));
+    }
+
+    public function test_submit_timesheet_blocks_future_week_with_friendly_error(): void
+    {
+        $nextMonday = $this->monday->copy()->addWeek();
+        $timesheet = $this->draftTimesheet(['week_start' => $nextMonday]);
+        $this->actingAs($this->employee);
+
+        try {
+            TimesheetResource::submitTimesheet($timesheet);
+            $this->fail('Expected ValidationException for a future-week submission.');
+        } catch (ValidationException $exception) {
+            $this->assertStringContainsString(
+                'has not started yet',
+                collect($exception->validator->errors()->get('week_start'))->first(),
+            );
+        }
+
+        $this->assertSame('draft', $timesheet->fresh()->status);
+        $this->assertDatabaseMissing('approval_logs', [
+            'timesheet_id' => $timesheet->id,
+            'action' => 'submitted',
+        ]);
+    }
+
+    public function test_submit_action_hidden_for_future_week_timesheet(): void
+    {
+        $nextMonday = $this->monday->copy()->addWeek();
+        $timesheet = $this->draftTimesheet(['week_start' => $nextMonday]);
+        $this->actingAs($this->employee);
+
+        Livewire::test(ViewTimesheet::class, ['record' => $timesheet->getRouteKey()])
+            ->assertActionHidden('submit');
+    }
 }
