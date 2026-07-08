@@ -166,6 +166,11 @@ class TimesheetAccess
         }
 
         if ($user->isProjectManager() || $user->isProgramManager()) {
+            // Deliberate, not a leak: an approver who has acted on any of a
+            // user's timesheets keeps read access to that user's hours on the
+            // same project (the approvalLogs clause), in addition to all
+            // timesheets on projects they manage. Confirmed as intended
+            // business rule — do not tighten this to the single approved row.
             return $query->where(function (Builder $scopedQuery) use ($user): void {
                 $scopedQuery
                     ->whereHas(

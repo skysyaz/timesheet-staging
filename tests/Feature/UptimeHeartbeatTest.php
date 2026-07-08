@@ -29,7 +29,11 @@ class UptimeHeartbeatTest extends TestCase
         $this->get('/uptime/heartbeat')
             ->assertForbidden();
 
-        $this->get('/uptime/heartbeat?token=wrong')
+        $this->get('/uptime/heartbeat?token=test-heartbeat-token')
+            ->assertForbidden();
+
+        $this->withHeader('X-Uptime-Token', 'wrong')
+            ->get('/uptime/heartbeat')
             ->assertForbidden();
     }
 
@@ -37,7 +41,8 @@ class UptimeHeartbeatTest extends TestCase
     {
         Cache::forget(config('observability.uptime.cache_key_scheduler'));
 
-        $this->get('/uptime/heartbeat?token=test-heartbeat-token')
+        $this->withHeader('X-Uptime-Token', 'test-heartbeat-token')
+            ->get('/uptime/heartbeat')
             ->assertStatus(503)
             ->assertSee('Scheduler heartbeat stale');
     }
@@ -46,7 +51,8 @@ class UptimeHeartbeatTest extends TestCase
     {
         Artisan::call('uptime:signal-heartbeat');
 
-        $this->get('/uptime/heartbeat?token=test-heartbeat-token')
+        $this->withHeader('X-Uptime-Token', 'test-heartbeat-token')
+            ->get('/uptime/heartbeat')
             ->assertOk()
             ->assertSee('OK');
     }
@@ -55,12 +61,14 @@ class UptimeHeartbeatTest extends TestCase
     {
         Cache::forget(config('observability.uptime.cache_key_queue'));
 
-        $this->get('/uptime/queue-heartbeat?token=test-heartbeat-token')
+        $this->withHeader('X-Uptime-Token', 'test-heartbeat-token')
+            ->get('/uptime/queue-heartbeat')
             ->assertStatus(503);
 
         (new RecordQueueHeartbeat)->handle();
 
-        $this->get('/uptime/queue-heartbeat?token=test-heartbeat-token')
+        $this->withHeader('X-Uptime-Token', 'test-heartbeat-token')
+            ->get('/uptime/queue-heartbeat')
             ->assertOk()
             ->assertSee('OK');
     }
@@ -71,7 +79,8 @@ class UptimeHeartbeatTest extends TestCase
 
         Artisan::call('uptime:signal-heartbeat');
 
-        $this->get('/uptime/heartbeat?token=test-heartbeat-token')
+        $this->withHeader('X-Uptime-Token', 'test-heartbeat-token')
+            ->get('/uptime/heartbeat')
             ->assertStatus(503)
             ->assertSee('Uptime monitoring disabled');
     }

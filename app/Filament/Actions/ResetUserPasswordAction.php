@@ -6,7 +6,6 @@ use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class ResetUserPasswordAction
@@ -42,8 +41,10 @@ class ResetUserPasswordAction
             ->modalDescription('Set a temporary password for this user. They should change it after signing in.')
             ->form(static::formSchema())
             ->action(function (User $record, array $data): void {
+                // The User model's `hashed` cast hashes the password on assign;
+                // pass plaintext and let the cast be the single source of truth.
                 $record->update([
-                    'password' => Hash::make($data['password']),
+                    'password' => $data['password'],
                 ]);
 
                 Notification::make()

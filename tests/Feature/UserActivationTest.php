@@ -19,7 +19,7 @@ class UserActivationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_creating_a_user_dispatches_activation_email_with_typed_password(): void
+    public function test_creating_a_user_dispatches_activation_email_without_plaintext_password(): void
     {
         Notification::fake();
 
@@ -38,10 +38,13 @@ class UserActivationTest extends TestCase
 
         $user = User::query()->where('email', 'ainie@example.com')->firstOrFail();
 
+        // The activation mail must carry a set-password token, never the
+        // cleartext password (no plainPassword property exists anymore).
         Notification::assertSentTo(
             $user,
             UserActivationNotification::class,
-            fn (UserActivationNotification $n) => $n->plainPassword === 'secret-pass-123',
+            fn (UserActivationNotification $n) => filled($n->activationToken)
+                && ! property_exists($n, 'plainPassword'),
         );
     }
 
@@ -64,7 +67,7 @@ class UserActivationTest extends TestCase
             Notification::assertSentTo(
                 $user,
                 UserActivationNotification::class,
-                fn (UserActivationNotification $n) => $n->plainPassword === null,
+                fn (UserActivationNotification $n) => filled($n->activationToken),
             );
         }
     }
@@ -103,7 +106,7 @@ class UserActivationTest extends TestCase
 
         $user = User::factory()->unverified()->create();
 
-        UserNotifier::sendActivation($user, 'plain');
+        UserNotifier::sendActivation($user);
 
         Notification::assertNothingSent();
     }

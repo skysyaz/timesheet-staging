@@ -13,15 +13,11 @@ class SecurityHeaders
         /** @var Response $response */
         $response = $next($request);
 
-        if ($request->is('admin/*') || $request->is('admin')) {
-            $response->headers->set('X-Frame-Options', 'SAMEORIGIN');
+        $response->headers->set('X-Frame-Options', 'DENY');
 
-            if ($this->shouldPreventAdminPageCache($request, $response)) {
-                $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-                $response->headers->set('Pragma', 'no-cache');
-            }
-        } else {
-            $response->headers->set('X-Frame-Options', 'DENY');
+        if ($this->shouldPreventAuthenticatedPageCache($request, $response)) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
         }
 
         $response->headers->set('X-Content-Type-Options', 'nosniff');
@@ -29,10 +25,14 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
-        if ($request->secure()) {
+        // ponytail: emit HSTS whenever the origin is HTTPS, not just when the
+        // current leg is TLS — behind a TLS-terminating proxy the internal leg
+        // is plain HTTP and $request->secure() is false, which would silently
+        // drop HSTS. Trusting APP_URL keeps it on for HTTPS deployments.
+        if ($request->secure() || str_starts_with((string) config('app.url'), 'https')) {
             $response->headers->set(
                 'Strict-Transport-Security',
-                'max-age=31536000; includeSubDomains',
+                'max-age=31536000; includeSubDomains; preload',
             );
         }
 
@@ -57,9 +57,16 @@ class SecurityHeaders
         return $response;
     }
 
-    private function shouldPreventAdminPageCache(Request $request, Response $response): bool
+    private function shouldPreventAuthenticatedPageCache(Request $request, Response $response): bool
     {
+        // Guard on authentication, not a URL prefix — the Filament panel is
+        // mounted at the root (->path('')), so an admin/* check never matched
+        // an actual authenticated page and left them cacheable.
         if (! $request->isMethod('GET')) {
+            return false;
+        }
+
+        if (! auth()->check()) {
             return false;
         }
 
@@ -72,7 +79,15 @@ class SecurityHeaders
     {
         $directives = [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net",
+            // 'unsafe-eval' is required: the standard Alpine build (bundled by
+            // Livewire/Filament) evaluates directive expressions via new Function,
+            // and Filament's admin UI fails to initialize without it. The unused
+            // cdn.jsdelivr.net origin is dropped so an HTML injection can't pull
+            // arbitrary scripts from a public CDN. Closing the unsafe-inline /
+            // unsafe-eval gap fully requires Livewire's CSP-safe build
+            // (livewire.csp_safe=true) + per-request nonces, and is a separate
+            // rollout — keep csp_enforce=false (report-only) until that lands.
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "img-src 'self' data: blob:",
             "font-src 'self' data: https://fonts.bunny.net",

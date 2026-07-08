@@ -51,6 +51,37 @@ class AdminAuthTest extends TestCase
         $this->assertAuthenticatedAs($user);
     }
 
+    public function test_login_is_rate_limited_after_five_failed_attempts(): void
+    {
+        // Filament's Login::authenticate() calls rateLimit(5) before credential
+        // checks, so the 6th attempt is throttled (no validation error, no
+        // redirect) while the first five produce failed-login form errors.
+        User::factory()->create([
+            'email' => 'throttle@example.com',
+            'password' => Hash::make('correct-pass-123'),
+            'role' => 'employee',
+        ]);
+
+        foreach (range(1, 5) as $attempt) {
+            Livewire::test(Login::class)
+                ->fillForm([
+                    'email' => 'throttle@example.com',
+                    'password' => 'wrong-pass-'.$attempt,
+                ])
+                ->call('authenticate')
+                ->assertHasFormErrors();
+        }
+
+        Livewire::test(Login::class)
+            ->fillForm([
+                'email' => 'throttle@example.com',
+                'password' => 'wrong-pass-6',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors()
+            ->assertNoRedirect();
+    }
+
     public function test_authenticated_user_can_access_admin(): void
     {
         $user = User::factory()->create(['role' => 'admin']);

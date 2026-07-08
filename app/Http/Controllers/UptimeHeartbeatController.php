@@ -56,7 +56,10 @@ class UptimeHeartbeatController extends Controller
             return false;
         }
 
-        return hash_equals($configured, (string) $request->query('token', ''));
+        // Read the token from a header, not the query string — query strings
+        // leak into access logs, Referer, and history. External uptime
+        // monitors must send `X-Uptime-Token: <token>` instead of ?token=.
+        return hash_equals($configured, (string) $request->header('X-Uptime-Token', ''));
     }
 
     protected function cacheIsFresh(string $key, int $staleMinutes): bool
