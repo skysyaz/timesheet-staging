@@ -19,16 +19,18 @@ return [
     | Content Security Policy (Enforcing)
     |--------------------------------------------------------------------------
     |
-    | Emits Content-Security-Policy alongside report-only (if enabled). The
-    | policy is tuned to what Filament/Livewire/Alpine actually need
-    | ('unsafe-inline' for inline script blocks; no 'unsafe-eval', no third-
-    | party script CDNs), so it is enforced by default. Set
-    | SECURITY_CSP_ENFORCE=false to fall back to report-only during a rollout
-    | if a violation appears.
+    | Emits Content-Security-Policy alongside report-only (if enabled). Keep
+    | this false (report-only) until the policy has been validated against the
+    | live Filament/Livewire UI: the standard Alpine build needs 'unsafe-eval'
+    | (new Function) and inline scripts need 'unsafe-inline', so enforcing the
+    | current policy doesn't fully stop XSS yet. Dropping both requires
+    | Livewire's CSP-safe build (livewire.csp_safe=true) plus per-request
+    | nonces, and is a separate rollout. Flip SECURITY_CSP_ENFORCE=true once
+    | report-only is violation-free.
     |
     */
 
-    'csp_enforce' => env('SECURITY_CSP_ENFORCE', true),
+    'csp_enforce' => env('SECURITY_CSP_ENFORCE', false),
 
     /*
     |--------------------------------------------------------------------------

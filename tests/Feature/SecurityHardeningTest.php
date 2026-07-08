@@ -43,7 +43,7 @@ class SecurityHardeningTest extends TestCase
         $response = $this->get('/login');
 
         $response->assertOk();
-        $response->assertHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.bunny.net; img-src 'self' data: blob:; font-src 'self' data: https://fonts.bunny.net; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
+        $response->assertHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.bunny.net; img-src 'self' data: blob:; font-src 'self' data: https://fonts.bunny.net; connect-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'");
     }
 
     public function test_security_txt_is_publicly_accessible(): void

@@ -79,11 +79,15 @@ class SecurityHeaders
     {
         $directives = [
             "default-src 'self'",
-            // 'unsafe-eval' and the jsdelivr CDN were unused (Livewire v3 /
-            // Filament v5 / Alpine v3 don't need eval) and let any HTML
-            // injection load arbitrary scripts. 'unsafe-inline' stays until a
-            // per-request nonce is wired through Filament's render hooks.
-            "script-src 'self' 'unsafe-inline'",
+            // 'unsafe-eval' is required: the standard Alpine build (bundled by
+            // Livewire/Filament) evaluates directive expressions via new Function,
+            // and Filament's admin UI fails to initialize without it. The unused
+            // cdn.jsdelivr.net origin is dropped so an HTML injection can't pull
+            // arbitrary scripts from a public CDN. Closing the unsafe-inline /
+            // unsafe-eval gap fully requires Livewire's CSP-safe build
+            // (livewire.csp_safe=true) + per-request nonces, and is a separate
+            // rollout — keep csp_enforce=false (report-only) until that lands.
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             "style-src 'self' 'unsafe-inline' https://fonts.bunny.net",
             "img-src 'self' data: blob:",
             "font-src 'self' data: https://fonts.bunny.net",
