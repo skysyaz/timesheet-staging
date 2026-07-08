@@ -19,12 +19,16 @@ return [
     | Content Security Policy (Enforcing)
     |--------------------------------------------------------------------------
     |
-    | When true, emits Content-Security-Policy alongside report-only (if enabled).
-    | Keep report-only on during transition; disable once violations are clean.
+    | Emits Content-Security-Policy alongside report-only (if enabled). The
+    | policy is tuned to what Filament/Livewire/Alpine actually need
+    | ('unsafe-inline' for inline script blocks; no 'unsafe-eval', no third-
+    | party script CDNs), so it is enforced by default. Set
+    | SECURITY_CSP_ENFORCE=false to fall back to report-only during a rollout
+    | if a violation appears.
     |
     */
 
-    'csp_enforce' => env('SECURITY_CSP_ENFORCE', false),
+    'csp_enforce' => env('SECURITY_CSP_ENFORCE', true),
 
     /*
     |--------------------------------------------------------------------------

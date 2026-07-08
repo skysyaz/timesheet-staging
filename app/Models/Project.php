@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\LogsAuditableChanges;
 use App\Support\ProjectScheduleHealth;
 use App\Models\ProjectType;
+use App\Models\Timesheet;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -102,9 +103,13 @@ class Project extends Model
 
     public function totalHours(): float
     {
+        // ponytail: select only the JSON hour columns (not tasks/notes/etc.)
+        // to bound memory. A SQL JSON sum would be the next step if a project
+        // ever crosses ~10k timesheet rows, but it diverges per DB dialect.
         return (float) $this->timesheets()
+            ->select(['hours', 'overtime_hours'])
             ->get()
-            ->sum(fn ($timesheet): float => $timesheet->totalHours());
+            ->sum(fn (Timesheet $timesheet): float => $timesheet->totalHours());
     }
 
     public function scheduleHealth(): ProjectScheduleHealth
@@ -120,7 +125,8 @@ class Project extends Model
         $this->loadMissing('members');
 
         return $this->timesheets()
-            ->with('user')
+            ->select(['id', 'user_id', 'hours', 'overtime_hours'])
+            ->with('user:id,name')
             ->get()
             ->groupBy('user_id')
             ->map(function ($timesheets, int $userId): array {
@@ -129,7 +135,7 @@ class Project extends Model
                 return [
                     'name' => $timesheets->first()?->user?->name ?? 'Unknown',
                     'role' => $member?->pivot?->assigned_role ?? '—',
-                    'hours' => round($timesheets->sum(fn ($timesheet): float => $timesheet->totalHours()), 1),
+                    'hours' => round($timesheets->sum(fn (Timesheet $timesheet): float => $timesheet->totalHours()), 1),
                 ];
             })
             ->sortByDesc('hours')

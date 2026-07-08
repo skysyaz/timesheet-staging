@@ -18,7 +18,7 @@ class UserNotifier
         return Setting::emailNotificationsEnabled();
     }
 
-    public static function sendActivation(User $user, ?string $plainPassword, ?string $subject = null, ?string $body = null): void
+    public static function sendActivation(User $user, ?string $subject = null, ?string $body = null): void
     {
         if (! static::enabled()) {
             static::logSkipped('activation', $user, 'email_notifications_disabled');
@@ -28,9 +28,8 @@ class UserNotifier
 
         $notification = new UserActivationNotification(
             user: $user,
-            plainPassword: $plainPassword,
             subject: $subject ?? 'Your Quatriz TimeSheet account is ready',
-            body: $body ?? 'An account has been created for you. Sign in with the details below, or set your own password using the link.',
+            body: $body ?? 'An account has been created for you. Set your own password using the link below.',
             activationToken: Password::createToken($user),
         );
 
@@ -58,7 +57,6 @@ class UserNotifier
         foreach ($users as $user) {
             static::dispatch($user, new UserActivationNotification(
                 user: $user,
-                plainPassword: null,
                 subject: $subject,
                 body: $body,
                 activationToken: Password::createToken($user),

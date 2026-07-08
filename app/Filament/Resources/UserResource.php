@@ -21,7 +21,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
@@ -53,7 +52,10 @@ class UserResource extends Resource
                         ->options(fn (): array => UserAccess::assignableRoleOptions(auth()->user())),
                     Forms\Components\TextInput::make('password')
                         ->password()
-                        ->dehydrateStateUsing(fn ($state) => filled($state) ? Hash::make($state) : null)
+                        // Pass plaintext through; the User model's `hashed` cast
+                        // hashes on assign. Dehydrate empty as null so edit can
+                        // skip the field without overwriting the stored hash.
+                        ->dehydrateStateUsing(fn ($state) => filled($state) ? $state : null)
                         ->dehydrated(fn ($state) => filled($state))
                         ->required(fn (string $operation) => $operation === 'create')
                         ->maxLength(255),
@@ -106,7 +108,7 @@ class UserResource extends Resource
                     ->icon('heroicon-o-envelope')
                     ->requiresConfirmation()
                     ->visible(fn (User $record) => static::canEdit($record))
-                    ->action(fn (User $record) => UserNotifier::sendActivation($record, null)),
+                    ->action(fn (User $record) => UserNotifier::sendActivation($record)),
                 EditAction::make()
                     ->visible(fn (User $record) => static::canEdit($record)),
                 DeleteAction::make()

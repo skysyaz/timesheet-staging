@@ -77,7 +77,7 @@ php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
    ```bash
    php artisan test
    php artisan uptime:signal-heartbeat
-   curl -s "https://timesheet.quatriz-sd.my/uptime/heartbeat?token=YOUR_TOKEN"
+   curl -s -H "X-Uptime-Token: YOUR_TOKEN" "https://timesheet.quatriz-sd.my/uptime/heartbeat"
    php artisan flare:test --errors   # after FLARE_KEY is set
    ```
 
@@ -99,8 +99,8 @@ Create these monitors in [Better Uptime / Better Stack](https://betteruptime.com
 |---------|-----|----------|-------|
 | Admin login | `https://timesheet.quatriz-sd.my/admin/login` | HTTP 200 | Public page |
 | Health check | `https://timesheet.quatriz-sd.my/up` | HTTP 200 | Restrict via `HEALTH_CHECK_ALLOWED_IPS` |
-| Scheduler heartbeat | `https://timesheet.quatriz-sd.my/uptime/heartbeat?token=TOKEN` | HTTP 200 | 503 if cron stopped |
-| Queue heartbeat | `https://timesheet.quatriz-sd.my/uptime/queue-heartbeat?token=TOKEN` | HTTP 200 | 503 if queue worker down |
+| Scheduler heartbeat | `https://timesheet.quatriz-sd.my/uptime/heartbeat` | HTTP 200 | 503 if cron stopped. Send the token as an `X-Uptime-Token` request header (Better Stack heartbeats support custom headers); **do not** put it in the query string |
+| Queue heartbeat | `https://timesheet.quatriz-sd.my/uptime/queue-heartbeat` | HTTP 200 | 503 if queue worker down. Token via `X-Uptime-Token` header |
 
 **DNS / firewall:** Monitors must reach the app over HTTPS (port 443). Allow Better Uptime probe IPs through Cloudflare/WAF if `/up` is IP-restricted.
 
@@ -192,7 +192,7 @@ composer audit
 
 # Heartbeat (local)
 php artisan uptime:signal-heartbeat
-curl "http://localhost:8000/uptime/heartbeat?token=YOUR_TOKEN"
+curl -H "X-Uptime-Token: YOUR_TOKEN" "http://localhost:8000/uptime/heartbeat"
 
 # Flare (requires key)
 php artisan flare:test --errors

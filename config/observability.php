@@ -8,7 +8,9 @@ return [
     |--------------------------------------------------------------------------
     |
     | External uptime monitors (Better Uptime / Better Stack) ping signed
-    | heartbeat URLs. See docs/OBSERVABILITY.md for monitor setup.
+    | heartbeat URLs. The token must be sent as the `X-Uptime-Token` request
+    | header — not a query string, which leaks into access logs and referer
+    | headers. See docs/OBSERVABILITY.md for monitor setup.
     |
     */
 

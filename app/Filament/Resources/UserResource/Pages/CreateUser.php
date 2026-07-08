@@ -24,12 +24,6 @@ class CreateUser extends CreateRecord
 
     protected function afterCreate(): void
     {
-        // getRawState() holds the typed plaintext before the password field's
-        // dehydrateStateUsing hashes it (getState()/mutateFormData run hashed).
-        $plain = $this->form->getRawState()['password'] ?? null;
-
-        if (filled($plain)) {
-            UserNotifier::sendActivation($this->record, (string) $plain);
-        }
+        UserNotifier::sendActivation($this->record);
     }
 }
