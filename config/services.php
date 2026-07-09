@@ -35,4 +35,10 @@ return [
         ],
     ],
 
+    'watchtower' => [
+        'url' => env('WATCHTOWER_URL'),
+        'token' => env('WATCHTOWER_TOKEN'),
+        'app_name' => env('WATCHTOWER_APP_NAME', 'timesheet'),
+    ],
+
 ];
