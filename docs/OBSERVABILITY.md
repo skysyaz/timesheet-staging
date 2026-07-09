@@ -1,9 +1,10 @@
 # Observability Runbook — Quatriz TimeSheet
 
-Production admin timesheet app with three integrated tools:
+Production admin timesheet app with four integrated tools:
 
 | Tool | Package / service | Purpose |
 |------|-------------------|---------|
+| **Watchtower** | Self-hosted at log.skysyaz.my | Exception and background-job error reporting |
 | **Flare** | `spatie/laravel-flare` | Exception and error reporting |
 | **Activity log** | `spatie/laravel-activitylog` | Admin/user audit trail |
 | **Better Uptime** | External monitors + signed heartbeats | Uptime and cron/queue liveness |
@@ -29,6 +30,9 @@ Production admin timesheet app with three integrated tools:
 | `UPTIME_SCHEDULER_STALE_MINUTES` | No | `5` | Scheduler heartbeat TTL |
 | `UPTIME_QUEUE_STALE_MINUTES` | No | `5` | Queue worker heartbeat TTL |
 | `HEALTH_CHECK_ALLOWED_IPS` | Recommended | *(empty)* | Comma-separated IPs for `/up` |
+| `WATCHTOWER_URL` | For Watchtower | *(empty)* | Watchtower base URL (e.g. `https://log.skysyaz.my`) |
+| `WATCHTOWER_TOKEN` | For Watchtower | *(empty)* | Bearer token from `php artisan watchtower:token timesheet` on Watchtower |
+| `WATCHTOWER_APP_NAME` | No | `timesheet` | Source app name shown in Watchtower panel |
 
 Generate a heartbeat token:
 
@@ -49,6 +53,7 @@ php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
 2. **Environment**
    - Copy new vars from `.env.example` into production `.env`
    - Set `FLARE_KEY` and `FLARE_REPORT=true` when Flare credentials are ready
+   - Set `WATCHTOWER_URL` and `WATCHTOWER_TOKEN` on production (deploy does not sync `.env`)
    - Set `BETTER_UPTIME_ENABLED=true` and `UPTIME_HEARTBEAT_TOKEN` when monitors are ready
    - Add Better Uptime probe IPs to `HEALTH_CHECK_ALLOWED_IPS` for `/up`
 
@@ -79,6 +84,7 @@ php -r "echo bin2hex(random_bytes(32)), PHP_EOL;"
    php artisan uptime:signal-heartbeat
    curl -s -H "X-Uptime-Token: YOUR_TOKEN" "https://timesheet.quatriz-sd.my/uptime/heartbeat"
    php artisan flare:test --errors   # after FLARE_KEY is set
+   php artisan test --filter=WatchtowerIntegrationTest
    ```
 
 ### Rollback plan
@@ -140,6 +146,55 @@ Create these monitors in [Better Uptime / Better Stack](https://betteruptime.com
 
 ---
 
+## Watchtower
+
+Self-hosted error ingest at **https://log.skysyaz.my**. Alerts via Telegram when new unresolved issues appear.
+
+### Setup
+
+1. On Watchtower: `php artisan watchtower:token timesheet`
+2. Add `WATCHTOWER_URL` and `WATCHTOWER_TOKEN` to this app's `.env`
+3. `php artisan config:cache` on production after env changes
+4. `php artisan test --filter=WatchtowerIntegrationTest`
+
+### Reporting hooks
+
+All hooks call `App\Support\WatchtowerReporter` — never throws if Watchtower is down (3s timeout + try/catch).
+
+| Hook | File | `context.source` | When it fires |
+|------|------|------------------|---------------|
+| Exception reporter | `bootstrap/app.php` | `http` or `console` | Unhandled/reportable exceptions (HTTP requests, Artisan commands) |
+| Queue failure | `app/Providers/WatchtowerServiceProvider.php` | `queue` | Any job exhausts retries (`Queue::failing`) — notifications, heartbeats, future jobs |
+| Scheduled task failure | `app/Providers/WatchtowerServiceProvider.php` | `scheduled` | Cron task throws (`ScheduledTaskFailed`) — heartbeat, activitylog:clean, future schedules |
+
+### Payload sent to `POST /api/errors`
+
+- `app_name`, `level`, `message`, `trace`
+- `context`: `exception_class`, `file`, `line`, `url` (HTTP only), plus hook-specific fields (`job`, `task`, `source`, …)
+
+### Ignored exceptions (same noise policy as Flare)
+
+- `404 Not Found`
+- HTTP exceptions with status &lt; 500
+
+Laravel also skips reporting `ValidationException`, `AuthorizationException`, and similar expected errors before the Watchtower hook runs.
+
+### Not automatically reported
+
+- Errors only logged with `Log::warning` / `Log::info` (no throw)
+- Validation and auth failures handled in Filament/forms
+- Duplicate queue report: `QueuesTimesheetNotification::failed()` logs locally; Watchtower is notified once via `Queue::failing`
+
+### Ops: triaging a Watchtower alert
+
+1. Open https://log.skysyaz.my → filter by app **timesheet**
+2. Check `context.source` — `http` vs `queue` vs `scheduled` vs `console`
+3. For `queue`: inspect `job` and `queue` in context; restart `timesheet-queue` if worker died
+4. For `scheduled`: verify cron (`schedule:run`) and the failing command in `routes/console.php`
+5. Resolve in panel when fixed; dedup suppresses repeat Telegram alerts within 1 hour
+
+---
+
 ## Activity log
 
 ### What is logged
@@ -197,6 +252,9 @@ curl -H "X-Uptime-Token: YOUR_TOKEN" "http://localhost:8000/uptime/heartbeat"
 # Flare (requires key)
 php artisan flare:test --errors
 
+# Watchtower (requires token)
+php artisan test --filter=WatchtowerIntegrationTest
+
 # Audit log migration
 php artisan migrate:status | grep activity_log
 ```
@@ -217,6 +275,8 @@ php artisan migrate:status | grep activity_log
 | `app/Console/Commands/SignalUptimeHeartbeat.php` | Scheduler signal |
 | `app/Jobs/RecordQueueHeartbeat.php` | Queue liveness |
 | `app/Http/Middleware/AttachFlareContext.php` | Per-request Flare context |
-| `bootstrap/app.php` | Flare exception handler, `/up` health |
+| `app/Support/WatchtowerReporter.php` | Watchtower HTTP client + noise filters |
+| `app/Providers/WatchtowerServiceProvider.php` | Queue + scheduled task failure hooks |
+| `bootstrap/app.php` | Flare + Watchtower exception hooks, `/up` health |
 | `routes/console.php` | Schedule definitions |
 | `routes/web.php` | Uptime routes |

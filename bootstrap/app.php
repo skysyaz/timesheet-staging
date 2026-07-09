@@ -3,11 +3,11 @@
 use App\Http\Middleware\AttachFlareContext;
 use App\Http\Middleware\RestrictHealthCheck;
 use App\Http\Middleware\SecurityHeaders;
+use App\Support\WatchtowerReporter;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 use Spatie\LaravelFlare\Facades\Flare;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
@@ -57,32 +57,8 @@ return Application::configure(basePath: dirname(__DIR__))
         );
 
         $exceptions->report(function (\Throwable $e): void {
-            $watchtowerUrl = config('services.watchtower.url');
-            $watchtowerToken = config('services.watchtower.token');
-
-            if (! filled($watchtowerUrl) || ! filled($watchtowerToken)) {
-                return;
-            }
-
-            try {
-                $request = app()->runningInConsole() ? null : request();
-
-                Http::withToken($watchtowerToken)
-                    ->timeout(3)
-                    ->post(rtrim($watchtowerUrl, '/').'/api/errors', [
-                        'app_name' => config('services.watchtower.app_name'),
-                        'level' => 'error',
-                        'message' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                        'context' => array_filter([
-                            'exception_class' => $e::class,
-                            'file' => $e->getFile(),
-                            'line' => $e->getLine(),
-                            'url' => $request?->fullUrl(),
-                        ], fn ($value) => $value !== null),
-                    ]);
-            } catch (\Throwable) {
-                // Never let a Watchtower outage break the app.
-            }
+            app(WatchtowerReporter::class)->report($e, [
+                'source' => app()->runningInConsole() ? 'console' : 'http',
+            ]);
         });
     })->create();

@@ -34,6 +34,7 @@ $moduleMap = [
     'BackfillActivityLogTest' => ['Audit Log', 'Medium'],
     'ObservabilityAccessTest' => ['Observability', 'High'],
     'FlareIntegrationTest' => ['Observability', 'Medium'],
+    'WatchtowerIntegrationTest' => ['Observability', 'Medium'],
     'UptimeHeartbeatTest' => ['Observability', 'High'],
     'SiteTrafficTest' => ['Observability', 'Medium'],
     'LocalAvatarProviderTest' => ['UI', 'Low'],
