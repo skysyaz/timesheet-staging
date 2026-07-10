@@ -6,6 +6,7 @@ use App\Filament\Resources\TimesheetResource;
 use App\Models\Project;
 use App\Models\Timesheet;
 use App\Models\User;
+use App\Support\TimesheetAccess;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -76,6 +77,11 @@ class TimesheetEditAuthorizationTest extends TestCase
             'status' => 'draft',
         ]);
 
+        $this->assertTrue(TimesheetAccess::userCanViewTimesheet($pm, $timesheet));
+        $this->assertTrue(
+            TimesheetAccess::scopeTimesheetsForUser(Timesheet::query(), $pm)->whereKey($timesheet->id)->exists(),
+        );
+
         $this->actingAs($pm)
             ->get(TimesheetResource::getUrl('edit', ['record' => $timesheet]))
             ->assertOk();
@@ -95,7 +101,7 @@ class TimesheetEditAuthorizationTest extends TestCase
 
         $this->actingAs($pm)
             ->get(TimesheetResource::getUrl('edit', ['record' => $timesheet]))
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_employee_can_access_view_page_for_approved_timesheet(): void

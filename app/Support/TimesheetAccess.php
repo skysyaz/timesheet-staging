@@ -54,8 +54,14 @@ class TimesheetAccess
             return true;
         }
 
+        // Owners always see their own rows (including PMs/program managers
+        // logging hours on projects they do not manage).
+        if ($timesheet->user_id === $user->id) {
+            return true;
+        }
+
         if ($user->isEmployee()) {
-            return $timesheet->user_id === $user->id;
+            return false;
         }
 
         if (self::userHasApprovalHistoryOnTimesheet($user, $timesheet)) {
@@ -66,7 +72,7 @@ class TimesheetAccess
         if (! $timesheet->relationLoaded('project')) {
             $timesheet->load('project');
         }
-        
+
         $project = $timesheet->project;
 
         if (! $project) {
@@ -186,9 +192,12 @@ class TimesheetAccess
             // same project (the approvalLogs clause), in addition to all
             // timesheets on projects they manage. Confirmed as intended
             // business rule — do not tighten this to the single approved row.
+            // Also include the approver's own timesheets so they can edit/view
+            // hours they logged on projects they do not manage.
             return $query->where(function (Builder $scopedQuery) use ($user): void {
                 $scopedQuery
-                    ->whereHas(
+                    ->where('user_id', $user->id)
+                    ->orWhereHas(
                         'project',
                         fn (Builder $projectQuery) => self::scopeAssignedProjectsForUser($projectQuery, $user),
                     )

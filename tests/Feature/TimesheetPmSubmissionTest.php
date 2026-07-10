@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 class TimesheetPmSubmissionTest extends TestCase
@@ -197,5 +198,30 @@ class TimesheetPmSubmissionTest extends TestCase
             'timesheet_id' => $timesheet->id,
             'action' => 'approved_pm',
         ]);
+    }
+
+    public function test_unauthorized_approve_aborts_forbidden(): void
+    {
+        $employee = User::factory()->create(['role' => 'employee']);
+        $timesheet = Timesheet::create([
+            'user_id' => $employee->id,
+            'project_id' => $this->project->id,
+            'project_role' => 'Developer',
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'pending_pm',
+        ]);
+
+        $this->actingAs($employee);
+
+        try {
+            TimesheetResource::handleApprove($timesheet, 'nope');
+            $this->fail('Expected HttpException for unauthorized approve.');
+        } catch (HttpException $exception) {
+            $this->assertSame(403, $exception->getStatusCode());
+        }
+
+        $this->assertSame('pending_pm', $timesheet->fresh()->status);
     }
 }

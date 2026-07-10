@@ -7,7 +7,7 @@ use App\Http\Controllers\UptimeHeartbeatController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/set-password/{token}', [SetPasswordController::class, 'show'])
-    ->middleware('throttle:5,60')
+    ->middleware('throttle:20,1')
     ->name('password.set');
 Route::post('/set-password', [SetPasswordController::class, 'store'])
     ->middleware('throttle:5,60')

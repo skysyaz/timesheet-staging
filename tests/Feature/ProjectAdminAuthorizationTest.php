@@ -55,7 +55,7 @@ class ProjectAdminAuthorizationTest extends TestCase
 
         $this->actingAs($projectAdmin)
             ->get(UserResource::getUrl('edit', ['record' => $admin]))
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_employee_cannot_create_projects(): void

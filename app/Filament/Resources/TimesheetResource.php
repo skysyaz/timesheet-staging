@@ -33,6 +33,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -455,75 +456,76 @@ class TimesheetResource extends Resource
      */
     public static function submitTimesheet(Timesheet $record): void
     {
-        $user = auth()->user();
+        DB::transaction(function () use ($record): void {
+            $record = Timesheet::query()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
+            $user = auth()->user();
 
-        if ($record->isFutureWeek()) {
-            throw ValidationException::withMessages([
-                'week_start' => 'This week has not started yet. Submit your timesheet once the week has begun.',
-            ]);
-        }
+            if ($record->isFutureWeek()) {
+                throw ValidationException::withMessages([
+                    'week_start' => 'This week has not started yet. Submit your timesheet once the week has begun.',
+                ]);
+            }
 
-        if (! static::canUserSubmitTimesheet($user, $record)) {
-            abort(403, 'You are not allowed to submit this timesheet.');
-        }
+            if (! static::canUserSubmitTimesheet($user, $record)) {
+                abort(403, 'You are not allowed to submit this timesheet.');
+            }
 
-        static::ensureProjectRole($record);
-        $record->refresh();
+            static::ensureProjectRole($record);
 
-        static::validateForSubmission($record);
+            static::validateForSubmission($record);
 
-        // Ensure project is loaded before accessing relationships
-        if (! $record->relationLoaded('project')) {
-            $record->load('project');
-        }
-        
-        $project = $record->project;
-        $requireProgramManager = Setting::programManagerApprovalRequired();
+            if (! $record->relationLoaded('project')) {
+                $record->load('project');
+            }
 
-        $record->approvalLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'submitted',
-        ]);
+            $project = $record->project;
+            $requireProgramManager = Setting::programManagerApprovalRequired();
 
-        if ($project && $user->canApproveAsPm() && $project->isManagedBy($user)) {
             $record->approvalLogs()->create([
                 'user_id' => $user->id,
-                'action' => 'approved_pm',
-                'comment' => 'Auto-approved as submitting project manager.',
+                'action' => 'submitted',
             ]);
 
-            if ($requireProgramManager) {
-                $record->update(['status' => 'pending_program_manager']);
-
-                AuditLogger::log('Timesheet submitted by PM, pending Program Manager', $record, [
+            if ($project && $user->canApproveAsPm() && $project->isManagedBy($user)) {
+                $record->approvalLogs()->create([
+                    'user_id' => $user->id,
                     'action' => 'approved_pm',
-                    'status' => 'pending_program_manager',
+                    'comment' => 'Auto-approved as submitting project manager.',
                 ]);
 
-                TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']));
+                if ($requireProgramManager) {
+                    $record->update(['status' => 'pending_program_manager']);
+
+                    AuditLogger::log('Timesheet submitted by PM, pending Program Manager', $record, [
+                        'action' => 'approved_pm',
+                        'status' => 'pending_program_manager',
+                    ]);
+
+                    TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']));
+
+                    return;
+                }
+
+                $record->update(['status' => 'approved']);
+
+                TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user);
+
+                AuditLogger::log('Timesheet submitted and approved by PM', $record, [
+                    'action' => 'approved_pm',
+                    'status' => 'approved',
+                ]);
 
                 return;
             }
 
-            $record->update(['status' => 'approved']);
+            $record->update(['status' => 'pending_pm']);
 
-            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user);
-
-            AuditLogger::log('Timesheet submitted and approved by PM', $record, [
-                'action' => 'approved_pm',
-                'status' => 'approved',
+            AuditLogger::log('Timesheet submitted for approval', $record, [
+                'status' => 'pending_pm',
             ]);
 
-            return;
-        }
-
-        $record->update(['status' => 'pending_pm']);
-
-        AuditLogger::log('Timesheet submitted for approval', $record, [
-            'status' => 'pending_pm',
-        ]);
-
-        TimesheetNotifier::notifySubmitted($record->fresh(['user', 'project']));
+            TimesheetNotifier::notifySubmitted($record->fresh(['user', 'project']));
+        });
     }
 
     public static function ensureProjectRole(Timesheet $record): void
@@ -563,113 +565,130 @@ class TimesheetResource extends Resource
 
     public static function handleApprove(Timesheet $record, string $comment): void
     {
-        $user = auth()->user();
+        DB::transaction(function () use ($record, $comment): void {
+            $record = Timesheet::query()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
+            $user = auth()->user();
 
-        if ($record->isFutureWeek()) {
-            throw ValidationException::withMessages([
-                'week_start' => 'This week has not started yet; it cannot be approved until the week has begun.',
-            ]);
-        }
+            if ($record->isFutureWeek()) {
+                throw ValidationException::withMessages([
+                    'week_start' => 'This week has not started yet; it cannot be approved until the week has begun.',
+                ]);
+            }
 
-        if ($record->isPendingPm() && $record->canBeApprovedBy($user)) {
-            $requireProgramManager = Setting::programManagerApprovalRequired();
+            if (! $user || ! $record->canBeApprovedBy($user)) {
+                abort(403, 'You are not allowed to approve this timesheet.');
+            }
 
-            if ($requireProgramManager) {
-                $record->update(['status' => 'pending_program_manager']);
+            if ($record->isPendingPm()) {
+                $requireProgramManager = Setting::programManagerApprovalRequired();
+
+                if ($requireProgramManager) {
+                    $record->update(['status' => 'pending_program_manager']);
+                    $record->approvalLogs()->create([
+                        'user_id' => $user->id,
+                        'action' => 'approved_pm',
+                        'comment' => $comment,
+                    ]);
+
+                    TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']), $comment);
+
+                    AuditLogger::log('Timesheet approved by PM, pending Program Manager', $record, [
+                        'action' => 'approved_pm',
+                        'status' => 'pending_program_manager',
+                    ]);
+
+                    return;
+                }
+
+                $record->update(['status' => 'approved']);
                 $record->approvalLogs()->create([
                     'user_id' => $user->id,
                     'action' => 'approved_pm',
                     'comment' => $comment,
                 ]);
 
-                TimesheetNotifier::notifyPendingProgramManager($record->fresh(['user', 'project']), $comment);
+                TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
 
-                AuditLogger::log('Timesheet approved by PM, pending Program Manager', $record, [
+                AuditLogger::log('Timesheet approved (PM, final)', $record, [
                     'action' => 'approved_pm',
-                    'status' => 'pending_program_manager',
+                    'status' => 'approved',
                 ]);
 
                 return;
             }
 
-            $record->update(['status' => 'approved']);
-            $record->approvalLogs()->create([
-                'user_id' => $user->id,
-                'action' => 'approved_pm',
-                'comment' => $comment,
-            ]);
+            if ($record->isPendingProgramManager()) {
+                $record->update(['status' => 'approved']);
+                $record->approvalLogs()->create([
+                    'user_id' => $user->id,
+                    'action' => 'approved_program_manager',
+                    'comment' => $comment,
+                ]);
 
-            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
+                TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
 
-            AuditLogger::log('Timesheet approved (PM, final)', $record, [
-                'action' => 'approved_pm',
-                'status' => 'approved',
-            ]);
+                AuditLogger::log('Timesheet approved (Program Manager)', $record, [
+                    'action' => 'approved_program_manager',
+                    'status' => 'approved',
+                ]);
 
-            return;
-        }
+                return;
+            }
 
-        if ($record->isPendingProgramManager() && $record->canBeApprovedBy($user)) {
-            $record->update(['status' => 'approved']);
-            $record->approvalLogs()->create([
-                'user_id' => $user->id,
-                'action' => 'approved_program_manager',
-                'comment' => $comment,
-            ]);
-
-            TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user, $comment);
-
-            AuditLogger::log('Timesheet approved (Program Manager)', $record, [
-                'action' => 'approved_program_manager',
-                'status' => 'approved',
-            ]);
-        }
+            abort(403, 'You are not allowed to approve this timesheet.');
+        });
     }
 
     public static function handleReject(Timesheet $record, string $comment): void
     {
-        $user = auth()->user();
+        DB::transaction(function () use ($record, $comment): void {
+            $record = Timesheet::query()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
+            $user = auth()->user();
 
-        if (! $user || ! $record->canBeRejectedBy($user)) {
-            abort(403, 'You are not allowed to reject this timesheet.');
-        }
+            if (! $user || ! $record->canBeRejectedBy($user)) {
+                abort(403, 'You are not allowed to reject this timesheet.');
+            }
 
-        $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_program_manager';
+            $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_program_manager';
 
-        $record->update(['status' => 'rejected']);
-        $record->approvalLogs()->create([
-            'user_id' => $user->id,
-            'action' => $action,
-            'comment' => $comment,
-        ]);
+            $record->update(['status' => 'rejected']);
+            $record->approvalLogs()->create([
+                'user_id' => $user->id,
+                'action' => $action,
+                'comment' => $comment,
+            ]);
 
-        TimesheetNotifier::notifyRejected($record->fresh(['user', 'project']), $user, $comment);
+            TimesheetNotifier::notifyRejected($record->fresh(['user', 'project']), $user, $comment);
 
-        AuditLogger::log('Timesheet rejected', $record, [
-            'action' => $action,
-            'status' => 'rejected',
-        ]);
+            AuditLogger::log('Timesheet rejected', $record, [
+                'action' => $action,
+                'status' => 'rejected',
+            ]);
+        });
     }
 
     public static function handleRevertToDraft(Timesheet $record, string $reason): void
     {
-        $user = auth()->user();
+        DB::transaction(function () use ($record, $reason): void {
+            $record = Timesheet::query()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
+            $user = auth()->user();
 
-        if (! $user || ! TimesheetAccess::userCanRevertToDraft($user, $record)) {
-            abort(403, 'You are not allowed to revert this timesheet.');
-        }
+            if (! $user || ! TimesheetAccess::userCanRevertToDraft($user, $record)) {
+                abort(403, 'You are not allowed to revert this timesheet.');
+            }
 
-        $record->update(['status' => 'draft']);
-        $record->approvalLogs()->create([
-            'user_id' => $user->id,
-            'action' => 'reverted_to_draft',
-            'comment' => $reason,
-        ]);
+            $record->update(['status' => 'draft']);
+            $record->approvalLogs()->create([
+                'user_id' => $user->id,
+                'action' => 'reverted_to_draft',
+                'comment' => $reason,
+            ]);
 
-        AuditLogger::log('Timesheet reverted to draft', $record, [
-            'action' => 'reverted_to_draft',
-            'status' => 'draft',
-        ]);
+            AuditLogger::log('Timesheet reverted to draft', $record, [
+                'action' => 'reverted_to_draft',
+                'status' => 'draft',
+            ]);
+        });
     }
 
     public static function canEdit(Model $record): bool
