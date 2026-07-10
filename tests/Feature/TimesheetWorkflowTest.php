@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\TimesheetResource;
 use App\Models\Project;
 use App\Models\Setting;
 use App\Models\Timesheet;
@@ -93,8 +94,6 @@ class TimesheetWorkflowTest extends TestCase
 
     public function test_employee_cannot_see_other_timesheets(): void
     {
-        User::factory()->create(['role' => 'employee']);
-
         $ts1 = Timesheet::create([
             'user_id' => $this->employee->id,
             'project_id' => $this->project->id,
@@ -113,9 +112,15 @@ class TimesheetWorkflowTest extends TestCase
             'status' => 'draft',
         ]);
 
-        $this->assertEquals($ts1->user_id, $this->employee->id);
-        $this->assertEquals($ts2->user_id, $this->pm->id);
-        $this->assertNotEquals($ts1->user_id, $ts2->user_id);
+        $this->actingAs($this->employee);
+
+        $scoped = TimesheetResource::getEloquentQuery();
+
+        // The employee's own timesheet is visible...
+        $this->assertTrue($scoped->whereKey($ts1->id)->exists());
+
+        // ...but another user's timesheet on the same project is excluded.
+        $this->assertFalse($scoped->whereKey($ts2->id)->exists());
     }
 
     public function test_rejected_timesheet_is_editable(): void

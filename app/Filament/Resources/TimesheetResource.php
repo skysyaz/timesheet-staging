@@ -10,6 +10,7 @@ use App\Filament\Resources\TimesheetResource\Pages;
 use App\Models\Setting;
 use App\Models\Timesheet;
 use App\Models\User;
+use App\Rules\ProjectMembershipForEmployee;
 use App\Rules\ValidDailyHours;
 use App\Rules\WeekStartsOnMonday;
 use App\Support\AuditLogger;
@@ -99,7 +100,8 @@ class TimesheetResource extends Resource
                             ->required()
                             ->searchable()
                             ->preload()
-                            ->live(),
+                            ->live()
+                            ->rule(new ProjectMembershipForEmployee),
                         Forms\Components\TextInput::make('project_role')
                             ->label('Project role')
                             ->placeholder('e.g. Site Engineer, Developer')
@@ -620,6 +622,11 @@ class TimesheetResource extends Resource
     public static function handleReject(Timesheet $record, string $comment): void
     {
         $user = auth()->user();
+
+        if (! $user || ! $record->canBeRejectedBy($user)) {
+            abort(403, 'You are not allowed to reject this timesheet.');
+        }
+
         $action = $record->isPendingPm() ? 'rejected_pm' : 'rejected_program_manager';
 
         $record->update(['status' => 'rejected']);

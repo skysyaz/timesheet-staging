@@ -25,7 +25,7 @@ class ListUsers extends ListRecords
                 ->label('Broadcast email')
                 ->icon('heroicon-o-envelope')
                 ->modalHeading('Broadcast activation email')
-                ->modalDescription('Sends your message plus a set-password link to every user visible to you.')
+                ->modalDescription('Sends your message to every user visible to you. Users who have not yet set their own password also receive a set-password link.')
                 ->stickyModalHeader()
                 ->visible(fn () => UserAccess::canManageUsers(auth()->user()))
                 ->form([
@@ -76,12 +76,12 @@ class ListUsers extends ListRecords
                 ->action(function (array $data): void {
                     $users = static::getResource()::getEloquentQuery()->get();
 
-                    UserNotifier::sendBroadcast($users, $data['subject'], $data['body'], auth()->user());
+                    $sent = UserNotifier::sendBroadcast($users, $data['subject'], $data['body'], auth()->user());
 
                     Notification::make()
                         ->success()
                         ->title('Broadcast queued')
-                        ->body("Activation emails queued for {$users->count()} users.")
+                        ->body("Activation emails queued for {$sent} users.")
                         ->send();
                 }),
         ];

@@ -11,12 +11,15 @@ Artisan::command('inspire', function () {
 
 Schedule::command('uptime:signal-heartbeat')
     ->everyMinute()
+    ->onOneServer()
     ->when(fn (): bool => (bool) config('observability.uptime.enabled'));
 
 Schedule::job(new RecordQueueHeartbeat)
     ->everyMinute()
+    ->onOneServer()
     ->when(fn (): bool => (bool) config('observability.uptime.enabled'));
 
 Schedule::command('activitylog:clean --force')
     ->daily()
+    ->onOneServer()
     ->when(fn (): bool => (bool) config('activitylog.enabled'));

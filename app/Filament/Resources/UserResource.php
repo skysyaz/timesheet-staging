@@ -108,7 +108,15 @@ class UserResource extends Resource
                     ->icon('heroicon-o-envelope')
                     ->requiresConfirmation()
                     ->visible(fn (User $record) => static::canEdit($record))
-                    ->action(fn (User $record) => UserNotifier::sendActivation($record)),
+                    ->action(function (User $record): void {
+                        // Re-authorize server-side: ->visible() is UI-only.
+                        $actor = auth()->user();
+                        if (! $actor || ! UserAccess::canEditUser($actor, $record)) {
+                            abort(403, 'You are not authorized to send activation emails.');
+                        }
+
+                        UserNotifier::sendActivation($record);
+                    }),
                 EditAction::make()
                     ->visible(fn (User $record) => static::canEdit($record)),
                 DeleteAction::make()

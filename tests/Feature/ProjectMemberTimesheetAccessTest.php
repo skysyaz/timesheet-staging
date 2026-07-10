@@ -2,11 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\TimesheetResource\Pages\CreateTimesheet;
 use App\Models\Project;
 use App\Models\User;
+use App\Rules\ProjectMembershipForEmployee;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Livewire\Livewire;
 use Tests\TestCase;
 
 class ProjectMemberTimesheetAccessTest extends TestCase
@@ -44,23 +43,25 @@ class ProjectMemberTimesheetAccessTest extends TestCase
             'created_by' => $pm->id,
         ]);
 
-        $this->actingAs($employee);
+        $employeeProjects = Project::query()
+            ->where('status', 'active')
+            ->whereHas('members', fn ($query) => $query->whereKey($employee->id))
+            ->pluck('id');
 
-        Livewire::test(CreateTimesheet::class)
-            ->assertFormFieldExists('project_id')
-            ->assertFormSet([
-                'project_id' => null,
-            ]);
+        $this->assertContains($assignedProject->id, $employeeProjects->all());
+        $this->assertNotContains($otherProject->id, $employeeProjects->all());
 
-        $this->assertTrue(
-            Project::query()
-                ->where('status', 'active')
-                ->whereHas('members', fn ($query) => $query->whereKey($employee->id))
-                ->whereKey($assignedProject->id)
-                ->exists()
-        );
+        $rule = new ProjectMembershipForEmployee($employee);
+        $rejected = false;
+        $rule->validate('project_id', $otherProject->id, function () use (&$rejected): void {
+            $rejected = true;
+        });
+        $this->assertTrue($rejected, 'Non-member project_id must fail server-side membership rule');
 
-        $this->assertFalse($assignedProject->hasMember(User::factory()->create()));
-        $this->assertFalse($otherProject->hasMember($employee));
+        $allowed = false;
+        $rule->validate('project_id', $assignedProject->id, function () use (&$allowed): void {
+            $allowed = true;
+        });
+        $this->assertFalse($allowed, 'Assigned project_id must pass membership rule');
     }
 }

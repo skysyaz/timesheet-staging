@@ -64,17 +64,15 @@ class WatchtowerIntegrationTest extends TestCase
 
     public function test_watchtower_reporter_never_throws_when_watchtower_is_down(): void
     {
-        Http::fake([
-            'https://log.skysyaz.my/api/errors' => Http::response(null, 503),
-        ]);
+        Http::fake(fn () => throw new \Illuminate\Http\Client\ConnectionException('Watchtower unreachable'));
 
         config([
             'services.watchtower.url' => 'https://log.skysyaz.my',
             'services.watchtower.token' => 'test-watchtower-token',
         ]);
 
-        app(WatchtowerReporter::class)->report(new RuntimeException('outage test'));
+        $this->expectNotToPerformAssertions();
 
-        $this->assertTrue(true);
+        app(WatchtowerReporter::class)->report(new RuntimeException('outage test'));
     }
 }

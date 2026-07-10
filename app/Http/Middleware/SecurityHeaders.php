@@ -72,7 +72,7 @@ class SecurityHeaders
 
         $contentType = (string) $response->headers->get('Content-Type', '');
 
-        return str_contains($contentType, 'text/html');
+        return str_contains($contentType, 'text/html') || str_contains($contentType, 'application/pdf');
     }
 
     private function contentSecurityPolicy(): string

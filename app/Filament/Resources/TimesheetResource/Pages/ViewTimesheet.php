@@ -105,7 +105,8 @@ class ViewTimesheet extends ViewRecord
                                 \Filament\Infolists\Components\RepeatableEntry::make('approvalLogs')
                                     ->schema([
                                         TextEntry::make('user.name')
-                                            ->label('By'),
+                                            ->label('By')
+                                            ->formatStateUsing(fn (?string $state): string => $state ?: '(deleted user)'),
                                         TextEntry::make('action')
                                             ->label('Action')
                                             ->badge()

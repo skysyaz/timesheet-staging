@@ -19,9 +19,17 @@ class Project extends Model
     protected static function booted(): void
     {
         static::creating(function (Project $project): void {
-            if (! $project->project_type_id) {
-                $project->project_type_id = ProjectType::defaultId();
+            if ($project->project_type_id) {
+                return;
             }
+
+            $defaultId = ProjectType::defaultId();
+
+            if ($defaultId === null) {
+                throw new \RuntimeException('Create an active project type before creating projects.');
+            }
+
+            $project->project_type_id = $defaultId;
         });
     }
 

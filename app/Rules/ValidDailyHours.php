@@ -9,7 +9,13 @@ class ValidDailyHours implements ValidationRule
 {
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
+        if ($value === null) {
+            return;
+        }
+
         if (! is_array($value)) {
+            $fail('Each day must be a valid number of hours.');
+
             return;
         }
 

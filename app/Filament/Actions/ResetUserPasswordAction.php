@@ -3,6 +3,7 @@
 namespace App\Filament\Actions;
 
 use App\Models\User;
+use App\Support\UserAccess;
 use Filament\Actions\Action;
 use Filament\Forms;
 use Filament\Notifications\Notification;
@@ -41,6 +42,13 @@ class ResetUserPasswordAction
             ->modalDescription('Set a temporary password for this user. They should change it after signing in.')
             ->form(static::formSchema())
             ->action(function (User $record, array $data): void {
+                // Re-authorize server-side: ->visible() is UI-only and can be
+                // bypassed via a crafted Livewire mount call.
+                $actor = auth()->user();
+                if (! $actor || ! UserAccess::canEditUser($actor, $record)) {
+                    abort(403, 'You are not authorized to reset this user’s password.');
+                }
+
                 // The User model's `hashed` cast hashes the password on assign;
                 // pass plaintext and let the cast be the single source of truth.
                 $record->update([

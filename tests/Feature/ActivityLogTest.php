@@ -79,7 +79,7 @@ class ActivityLogTest extends TestCase
         TimesheetResource::handleApprove($timesheet, 'Looks good');
 
         $this->assertDatabaseHas('activity_log', [
-            'description' => 'Timesheet approved by PM, pending PD',
+            'description' => 'Timesheet approved by PM, pending Program Manager',
             'subject_type' => Timesheet::class,
             'subject_id' => $timesheet->id,
             'causer_id' => $pm->id,

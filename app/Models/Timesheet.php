@@ -188,6 +188,13 @@ class Timesheet extends Model
             return false;
         }
 
+        // Segregation of duties: a user may not approve their own timesheet.
+        // Admins are exempt (they manage the whole system and generally don't
+        // submit timesheets), but approvers cannot self-approve their own hours.
+        if (! $user->isAdmin() && $this->user_id === $user->id) {
+            return false;
+        }
+
         $this->loadMissing('project');
         $project = $this->project;
 

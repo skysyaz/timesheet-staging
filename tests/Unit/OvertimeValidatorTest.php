@@ -16,12 +16,12 @@ class OvertimeValidatorTest extends TestCase
     {
         Setting::create(['key' => 'standardWeeklyHours', 'value' => 40]);
 
+        $this->expectNotToPerformAssertions();
+
         OvertimeValidator::validate(
             [8, 8, 8, 8, 8, 0, 0],
             [0, 0, 0, 0, 0, 0, 0],
         );
-
-        $this->assertTrue(true);
     }
 
     public function test_combined_regular_and_overtime_over_24_hours_fails(): void

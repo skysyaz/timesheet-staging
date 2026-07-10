@@ -38,8 +38,9 @@ class UserNotifier
 
     /**
      * @param  Collection<int, User>  $users
+     * @return int Number of notifications dispatched.
      */
-    public static function sendBroadcast(Collection $users, string $subject, string $body, ?User $sender = null): void
+    public static function sendBroadcast(Collection $users, string $subject, string $body, ?User $sender = null): int
     {
         $users = $users->filter()->unique('id');
 
@@ -49,17 +50,26 @@ class UserNotifier
                 'count' => $users->count(),
             ]);
 
-            return;
+            return 0;
         }
 
         $sent = 0;
 
         foreach ($users as $user) {
+            // Only issue a set-password token for users who haven't completed
+            // onboarding yet (email_verified_at is set when they set their own
+            // password). Already-onboarded users receive a plain announcement,
+            // and — critically — we avoid Password::createToken() for them so
+            // we don't wipe any in-flight password reset they may have started.
+            $token = $user->email_verified_at === null
+                ? Password::createToken($user)
+                : null;
+
             static::dispatch($user, new UserActivationNotification(
                 user: $user,
                 subject: $subject,
                 body: $body,
-                activationToken: Password::createToken($user),
+                activationToken: $token,
             ), 'broadcast');
 
             $sent++;
@@ -75,6 +85,8 @@ class UserNotifier
         }
 
         Log::info('User broadcast dispatched', ['count' => $sent]);
+
+        return $sent;
     }
 
     protected static function dispatch(User $user, UserActivationNotification $notification, string $event): void

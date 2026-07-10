@@ -11,7 +11,7 @@ class UserAccessProjectMembersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_admin_sees_all_non_admin_users_as_assignable(): void
+    public function test_admin_sees_all_users_including_admins_as_assignable(): void
     {
         User::factory()->count(3)->create(['role' => 'employee']);
         $admin = User::factory()->create(['role' => 'admin']);
@@ -19,6 +19,7 @@ class UserAccessProjectMembersTest extends TestCase
         $results = UserAccess::scopeAssignableProjectMembers(User::query(), $admin)->get();
 
         $this->assertCount(4, $results);
+        $this->assertTrue($results->contains('id', $admin->id));
     }
 
     public function test_project_admin_sees_all_users_as_assignable(): void

@@ -85,11 +85,42 @@ class SecurityHardeningTest extends TestCase
         $response->assertNotFound();
     }
 
-    public function test_health_check_allows_localhost_in_production(): void
+    public function test_health_check_blocks_localhost_in_production_without_allowlist(): void
     {
         $this->app->detectEnvironment(fn () => 'production');
+        config(['security.health_check_allowed_ips' => '']);
 
-        $response = $this->getJson('/up');
+        $response = $this->call(
+            'GET',
+            '/up',
+            [],
+            [],
+            [],
+            [
+                'REMOTE_ADDR' => '127.0.0.1',
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+        );
+
+        $response->assertNotFound();
+    }
+
+    public function test_health_check_allows_configured_ips_in_production(): void
+    {
+        $this->app->detectEnvironment(fn () => 'production');
+        config(['security.health_check_allowed_ips' => '203.0.113.10']);
+
+        $response = $this->call(
+            'GET',
+            '/up',
+            [],
+            [],
+            [],
+            [
+                'REMOTE_ADDR' => '203.0.113.10',
+                'HTTP_ACCEPT' => 'application/json',
+            ],
+        );
 
         $response->assertOk();
         $response->assertJson(['status' => 'up']);

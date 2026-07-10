@@ -23,17 +23,13 @@ class RestrictHealthCheck
             return true;
         }
 
-        $ip = $request->ip();
-
-        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
-            return true;
-        }
-
+        // Do not auto-allow 127.0.0.1: behind a reverse proxy every request can
+        // look local. Rely on the configured allowlist for non-local envs.
         $allowed = array_filter(array_map(
             trim(...),
             explode(',', (string) config('security.health_check_allowed_ips', '')),
         ));
 
-        return in_array($ip, $allowed, true);
+        return in_array($request->ip(), $allowed, true);
     }
 }

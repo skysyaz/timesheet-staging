@@ -18,7 +18,7 @@ class UserActivationNotification extends Notification implements ShouldQueue, Sh
         public User $user,
         public string $subject,
         public string $body,
-        public string $activationToken,
+        public ?string $activationToken = null,
     ) {}
 
     /**
@@ -37,16 +37,21 @@ class UserActivationNotification extends Notification implements ShouldQueue, Sh
             ->line($this->body);
 
         // No cleartext password: the set-password token below is the secure
-        // onboarding path, so the temporary password is never mailed.
+        // onboarding path, so the temporary password is never mailed. The
+        // token is only issued for users who haven't set their own password
+        // yet; already-onboarded users receive a plain announcement.
 
         $loginUrl = Filament::getLoginUrl() ?: url('/login');
 
-        return $message
-            ->line('**Email:** '.$this->user->email)
-            ->action('Set your own password', route('password.set', [
+        $message->line('**Email:** '.$this->user->email);
+
+        if ($this->activationToken !== null) {
+            $message->action('Set your own password', route('password.set', [
                 'token' => $this->activationToken,
                 'email' => $this->user->email,
-            ]))
-            ->line('Sign in at: '.$loginUrl);
+            ]));
+        }
+
+        return $message->line('Sign in at: '.$loginUrl);
     }
 }

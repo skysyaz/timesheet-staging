@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Project;
 use App\Models\Timesheet;
 use App\Models\User;
+use App\Rules\ProjectMembershipForEmployee;
 use App\Rules\ValidDailyHours;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -185,14 +186,14 @@ class WeeklyHoursSheet
     private function normalizeIncomingRows(array $rows): array
     {
         return array_values(array_map(function (array $row): array {
-            $hours = array_map(
+            $hours = array_slice(array_map(
                 fn (mixed $value): float => WeeklyHoursFormatter::parse($value),
                 array_replace([0, 0, 0, 0, 0, 0, 0], array_values($row['hours'] ?? [])),
-            );
-            $overtimeHours = array_map(
+            ), 0, 7);
+            $overtimeHours = array_slice(array_map(
                 fn (mixed $value): float => WeeklyHoursFormatter::parse($value),
                 array_replace([0, 0, 0, 0, 0, 0, 0], array_values($row['overtime_hours'] ?? [])),
-            );
+            ), 0, 7);
 
             return [
                 'id' => filled($row['id'] ?? null) ? (int) $row['id'] : null,
@@ -238,33 +239,45 @@ class WeeklyHoursSheet
                 continue;
             }
 
+            $existing = null;
+
+            if ($row['id']) {
+                $existing = Timesheet::query()->find($row['id']);
+
+                if (! $existing || $existing->user_id !== $this->user->id) {
+                    $errors["rows.{$index}.id"] = 'This timesheet row could not be found.';
+
+                    continue;
+                }
+
+                if (! TimesheetAccess::userCanEditTimesheet($actor, $existing)) {
+                    $errors["rows.{$index}.id"] = 'This row cannot be edited in its current status.';
+                }
+            }
+
             $validator = Validator::make(
                 [
+                    'project_id' => $row['project_id'],
                     'hours' => $row['hours'],
                     'overtime_hours' => $row['overtime_hours'],
                 ],
                 [
+                    'project_id' => [new ProjectMembershipForEmployee($this->user, $existing)],
                     'hours' => [new ValidDailyHours()],
                     'overtime_hours' => [new ValidDailyHours()],
                 ],
             );
 
             if ($validator->fails()) {
-                $errors["rows.{$index}.hours"] = $validator->errors()->first('hours')
-                    ?? $validator->errors()->first('overtime_hours');
-            }
-
-            if ($row['id']) {
-                $timesheet = Timesheet::query()->find($row['id']);
-
-                if (! $timesheet || $timesheet->user_id !== $this->user->id) {
-                    $errors["rows.{$index}.id"] = 'This timesheet row could not be found.';
-
-                    continue;
+                if ($validator->errors()->has('project_id')) {
+                    $errors["rows.{$index}.project_id"] = $validator->errors()->first('project_id');
                 }
 
-                if (! TimesheetAccess::userCanEditTimesheet($actor, $timesheet)) {
-                    $errors["rows.{$index}.id"] = 'This row cannot be edited in its current status.';
+                $hoursError = $validator->errors()->first('hours')
+                    ?? $validator->errors()->first('overtime_hours');
+
+                if ($hoursError) {
+                    $errors["rows.{$index}.hours"] = $hoursError;
                 }
             }
         }
@@ -288,7 +301,19 @@ class WeeklyHoursSheet
     private function persistRow(array $row, User $actor): Timesheet
     {
         if ($row['id']) {
-            $timesheet = Timesheet::query()->findOrFail($row['id']);
+            // Scope by the sheet's owner so a tampered row id can never mutate
+            // another user's timesheet (IDOR). The client-supplied `editable`
+            // flag is not trusted; editability is recomputed server-side from
+            // the record's status. Non-editable (approved/pending) rows are
+            // display-only and are returned untouched rather than written.
+            $timesheet = Timesheet::query()
+                ->where('user_id', $this->user->id)
+                ->findOrFail($row['id']);
+
+            if (! TimesheetAccess::userCanEditTimesheet($actor, $timesheet)) {
+                return $timesheet;
+            }
+
             $timesheet->update([
                 'project_id' => $row['project_id'],
                 'project_role' => $this->resolveProjectRole($timesheet, $row['project_id']),
