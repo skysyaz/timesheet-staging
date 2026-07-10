@@ -109,7 +109,8 @@ class TimesheetNotifier
     {
         $manager = $timesheet->project?->projectManager;
 
-        if ($manager) {
+        // Segregation of duties: if the only PM is the submitter, notify admins.
+        if ($manager && $manager->id !== $timesheet->user_id) {
             return collect([$manager]);
         }
 
@@ -123,7 +124,7 @@ class TimesheetNotifier
     {
         $programManager = $timesheet->project?->programManager;
 
-        if ($programManager) {
+        if ($programManager && $programManager->id !== $timesheet->user_id) {
             return collect([$programManager]);
         }
 

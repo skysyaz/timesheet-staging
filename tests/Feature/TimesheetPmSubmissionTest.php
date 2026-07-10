@@ -224,4 +224,98 @@ class TimesheetPmSubmissionTest extends TestCase
 
         $this->assertSame('pending_pm', $timesheet->fresh()->status);
     }
+
+    public function test_pm_own_submit_without_program_manager_goes_to_pending_pm_not_approved(): void
+    {
+        Setting::setValue('requireProgramManagerApproval', false);
+
+        $timesheet = Timesheet::create([
+            'user_id' => $this->pm->id,
+            'project_id' => $this->project->id,
+            'project_role' => 'Project Manager',
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($this->pm);
+
+        $this->assertStringContainsString(
+            'admin approval',
+            TimesheetResource::submitConfirmationMessage($this->pm, $timesheet),
+        );
+
+        TimesheetResource::submitTimesheet($timesheet);
+
+        $timesheet->refresh();
+
+        $this->assertSame('pending_pm', $timesheet->status);
+        $this->assertFalse($timesheet->canBeApprovedBy($this->pm));
+        $this->assertDatabaseHas('approval_logs', [
+            'timesheet_id' => $timesheet->id,
+            'user_id' => $this->pm->id,
+            'action' => 'submitted',
+        ]);
+        $this->assertDatabaseMissing('approval_logs', [
+            'timesheet_id' => $timesheet->id,
+            'action' => 'approved_pm',
+        ]);
+    }
+
+    public function test_admin_can_approve_pm_own_timesheet_when_program_manager_off(): void
+    {
+        Setting::setValue('requireProgramManagerApproval', false);
+        $admin = User::factory()->admin()->create();
+
+        $timesheet = Timesheet::create([
+            'user_id' => $this->pm->id,
+            'project_id' => $this->project->id,
+            'project_role' => 'Project Manager',
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($this->pm);
+        TimesheetResource::submitTimesheet($timesheet);
+
+        $this->assertSame('pending_pm', $timesheet->fresh()->status);
+
+        $this->actingAs($admin);
+        TimesheetResource::handleApprove($timesheet->fresh(), 'Admin review');
+
+        $this->assertSame('approved', $timesheet->fresh()->status);
+        $this->assertDatabaseHas('approval_logs', [
+            'timesheet_id' => $timesheet->id,
+            'user_id' => $admin->id,
+            'action' => 'approved_pm',
+        ]);
+    }
+
+    public function test_pm_own_submit_notifies_admins_not_self_when_program_manager_off(): void
+    {
+        Setting::setValue('requireProgramManagerApproval', false);
+        Setting::setValue('emailNotifications', true);
+        $admin = User::factory()->admin()->create();
+
+        $timesheet = Timesheet::create([
+            'user_id' => $this->pm->id,
+            'project_id' => $this->project->id,
+            'project_role' => 'Project Manager',
+            'week_start' => $this->monday,
+            'hours' => [8, 8, 8, 8, 8, 0, 0],
+            'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($this->pm);
+        Notification::fake();
+
+        TimesheetResource::submitTimesheet($timesheet);
+
+        Notification::assertSentTo($admin, TimesheetSubmittedNotification::class);
+        Notification::assertNotSentTo($this->pm, TimesheetSubmittedNotification::class);
+    }
 }

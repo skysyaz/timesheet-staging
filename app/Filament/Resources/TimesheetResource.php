@@ -432,7 +432,11 @@ class TimesheetResource extends Resource
         }
 
         if ($user && $record->project?->isManagedBy($user) && $user->canApproveAsPm()) {
-            return 'Submit this timesheet for program manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
+            if (Setting::programManagerApprovalRequired()) {
+                return 'Submit this timesheet for program manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
+            }
+
+            return 'Submit this timesheet for admin approval? You cannot approve your own hours. You will not be able to edit it until it is rejected or reverted to draft.';
         }
 
         return 'Submit this timesheet for project manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
@@ -487,13 +491,17 @@ class TimesheetResource extends Resource
             ]);
 
             if ($project && $user->canApproveAsPm() && $project->isManagedBy($user)) {
-                $record->approvalLogs()->create([
-                    'user_id' => $user->id,
-                    'action' => 'approved_pm',
-                    'comment' => 'Auto-approved as submitting project manager.',
-                ]);
-
+                // Skip the PM queue for the submitting PM (they cannot approve
+                // their own hours via the Approve action). With program-manager
+                // approval on, the next human reviewer is the program manager.
+                // With it off, leave pending_pm for an admin — never self-finalize.
                 if ($requireProgramManager) {
+                    $record->approvalLogs()->create([
+                        'user_id' => $user->id,
+                        'action' => 'approved_pm',
+                        'comment' => 'Auto-approved as submitting project manager.',
+                    ]);
+
                     $record->update(['status' => 'pending_program_manager']);
 
                     AuditLogger::log('Timesheet submitted by PM, pending Program Manager', $record, [
@@ -506,14 +514,13 @@ class TimesheetResource extends Resource
                     return;
                 }
 
-                $record->update(['status' => 'approved']);
+                $record->update(['status' => 'pending_pm']);
 
-                TimesheetNotifier::notifyApproved($record->fresh(['user', 'project']), $user);
-
-                AuditLogger::log('Timesheet submitted and approved by PM', $record, [
-                    'action' => 'approved_pm',
-                    'status' => 'approved',
+                AuditLogger::log('Timesheet submitted for admin approval (PM cannot self-approve)', $record, [
+                    'status' => 'pending_pm',
                 ]);
+
+                TimesheetNotifier::notifySubmitted($record->fresh(['user', 'project']));
 
                 return;
             }
@@ -644,6 +651,12 @@ class TimesheetResource extends Resource
         DB::transaction(function () use ($record, $comment): void {
             $record = Timesheet::query()->whereKey($record->getKey())->lockForUpdate()->firstOrFail();
             $user = auth()->user();
+
+            if ($record->isFutureWeek()) {
+                throw ValidationException::withMessages([
+                    'week_start' => 'This week has not started yet; it cannot be rejected until the week has begun.',
+                ]);
+            }
 
             if (! $user || ! $record->canBeRejectedBy($user)) {
                 abort(403, 'You are not allowed to reject this timesheet.');
