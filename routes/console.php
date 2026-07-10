@@ -17,6 +17,6 @@ Schedule::job(new RecordQueueHeartbeat)
     ->everyMinute()
     ->when(fn (): bool => (bool) config('observability.uptime.enabled'));
 
-Schedule::command('activitylog:clean')
+Schedule::command('activitylog:clean --force')
     ->daily()
     ->when(fn (): bool => (bool) config('activitylog.enabled'));
