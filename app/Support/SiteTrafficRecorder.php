@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\SiteTrafficDaily;
 use Filament\Facades\Filament;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
@@ -28,10 +29,7 @@ class SiteTrafficRecorder
         $isNewSession = $sessionKey === null
             || Cache::add($sessionKey, true, now()->endOfDay());
 
-        $row = SiteTrafficDaily::query()->firstOrCreate(
-            ['date' => $date],
-            ['page_views' => 0, 'unique_sessions' => 0],
-        );
+        $row = $this->dayRow($date);
 
         $row->increment('page_views');
 
@@ -63,6 +61,27 @@ class SiteTrafficRecorder
         return (int) SiteTrafficDaily::query()
             ->whereDate('date', now()->toDateString())
             ->value('page_views');
+    }
+
+    protected function dayRow(string $date): SiteTrafficDaily
+    {
+        $existing = SiteTrafficDaily::query()->whereDate('date', $date)->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        try {
+            return SiteTrafficDaily::query()->create([
+                'date' => $date,
+                'page_views' => 0,
+                'unique_sessions' => 0,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            // Concurrent request won the insert; date cast/storage can differ
+            // across drivers, so look up with whereDate rather than exact match.
+            return SiteTrafficDaily::query()->whereDate('date', $date)->firstOrFail();
+        }
     }
 
     protected function shouldRecord(Request $request): bool

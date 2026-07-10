@@ -99,12 +99,24 @@ class Timesheet extends Model
 
     public function totalRegularHours(): float
     {
-        return array_sum($this->hours ?? [0, 0, 0, 0, 0, 0, 0]);
+        $hours = $this->hours;
+        
+        if (! is_array($hours)) {
+            return 0.0;
+        }
+        
+        return array_sum($hours);
     }
 
     public function totalOvertimeHours(): float
     {
-        return array_sum($this->overtime_hours ?? [0, 0, 0, 0, 0, 0, 0]);
+        $overtimeHours = $this->overtime_hours;
+        
+        if (! is_array($overtimeHours)) {
+            return 0.0;
+        }
+        
+        return array_sum($overtimeHours);
     }
 
     public function totalHours(): float
@@ -195,7 +207,11 @@ class Timesheet extends Model
             return false;
         }
 
-        $this->loadMissing('project');
+        // Ensure project is loaded before checking manager status
+        if (! $this->relationLoaded('project')) {
+            $this->load('project');
+        }
+        
         $project = $this->project;
 
         if ($this->isPendingPm()) {

@@ -12,7 +12,7 @@ trait LogsAuditableChanges
 
     public function getActivitylogOptions(): LogOptions
     {
-        // ponytail: log_name = the acting user's role (or 'system' for console/jobs),
+        // log_name = the acting user's role (or 'system' for console/jobs),
         // so the Audit Log page's "Log" badge reflects who made the change, not a
         // hardcoded "admin". This runs at log time, so Auth::user() is available.
         return LogOptions::defaults()

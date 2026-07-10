@@ -23,7 +23,10 @@ class TimesheetSummaryBuilder
 
     public static function fromRequest(Request $request): self
     {
-        return self::fromValidated($request->all());
+        // Validation should happen in controller before calling this method
+        throw new \BadMethodCallException(
+            'Use fromValidated() with pre-validated data instead of fromRequest()'
+        );
     }
 
     /**

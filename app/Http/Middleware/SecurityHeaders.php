@@ -25,7 +25,7 @@ class SecurityHeaders
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
         $response->headers->set('X-Permitted-Cross-Domain-Policies', 'none');
 
-        // ponytail: emit HSTS whenever the origin is HTTPS, not just when the
+        // Emit HSTS whenever the origin is HTTPS, not just when the
         // current leg is TLS — behind a TLS-terminating proxy the internal leg
         // is plain HTTP and $request->secure() is false, which would silently
         // drop HSTS. Trusting APP_URL keeps it on for HTTPS deployments.

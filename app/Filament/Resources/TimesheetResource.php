@@ -425,7 +425,10 @@ class TimesheetResource extends Resource
 
     public static function submitConfirmationMessage(?User $user, Timesheet $record): string
     {
-        $record->loadMissing('project');
+        // Ensure project is loaded before checking manager status
+        if (! $record->relationLoaded('project')) {
+            $record->load('project');
+        }
 
         if ($user && $record->project?->isManagedBy($user) && $user->canApproveAsPm()) {
             return 'Submit this timesheet for program manager approval? You will not be able to edit it until it is rejected or reverted to draft.';
@@ -469,7 +472,11 @@ class TimesheetResource extends Resource
 
         static::validateForSubmission($record);
 
-        $record->loadMissing('project');
+        // Ensure project is loaded before accessing relationships
+        if (! $record->relationLoaded('project')) {
+            $record->load('project');
+        }
+        
         $project = $record->project;
         $requireProgramManager = Setting::programManagerApprovalRequired();
 

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\TimesheetStatus;
 use App\Models\Project;
 use App\Models\Timesheet;
 use App\Models\User;
@@ -18,6 +19,16 @@ class TimesheetAccess
         'approved',
         'rejected',
     ];
+
+    public static function statusOptions(): array
+    {
+        return TimesheetStatus::options();
+    }
+
+    public static function statusValues(): array
+    {
+        return TimesheetStatus::values();
+    }
 
     public static function userCanEditTimesheet(User $user, Timesheet $timesheet): bool
     {
@@ -51,7 +62,11 @@ class TimesheetAccess
             return true;
         }
 
-        $timesheet->loadMissing('project');
+        // Ensure project is loaded for authorization checks
+        if (! $timesheet->relationLoaded('project')) {
+            $timesheet->load('project');
+        }
+        
         $project = $timesheet->project;
 
         if (! $project) {

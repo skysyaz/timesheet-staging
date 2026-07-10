@@ -111,7 +111,7 @@ class Project extends Model
 
     public function totalHours(): float
     {
-        // ponytail: select only the JSON hour columns (not tasks/notes/etc.)
+        // Select only the JSON hour columns (not tasks/notes/etc.)
         // to bound memory. A SQL JSON sum would be the next step if a project
         // ever crosses ~10k timesheet rows, but it diverges per DB dialect.
         return (float) $this->timesheets()
@@ -132,6 +132,8 @@ class Project extends Model
     {
         $this->loadMissing('members');
 
+        // Keep PHP-side summing: a SQL JSON sum diverges per DB dialect
+        // (Postgres vs SQLite used in tests).
         return $this->timesheets()
             ->select(['id', 'user_id', 'hours', 'overtime_hours'])
             ->with('user:id,name')

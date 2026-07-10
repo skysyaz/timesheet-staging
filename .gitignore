@@ -7,6 +7,8 @@
 .phpunit.result.cache
 /.codex
 /.cursor/
+# Explicit: local agent secrets under skills (also covered by /.cursor/)
+/.cursor/skills/SECRETS.md
 /.idea
 /.nova
 /.phpunit.cache

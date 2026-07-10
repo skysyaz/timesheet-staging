@@ -68,7 +68,7 @@ class WatchtowerReporter
             }
         };
 
-        // ponytail: sync in tests so Http::assertSent works without terminate();
+        // Sync in tests so Http::assertSent works without terminate();
         // defer on HTTP so the error response is not blocked by the 3s POST.
         if (app()->environment('testing')) {
             $send();

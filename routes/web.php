@@ -7,10 +7,10 @@ use App\Http\Controllers\UptimeHeartbeatController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/set-password/{token}', [SetPasswordController::class, 'show'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:5,60')
     ->name('password.set');
 Route::post('/set-password', [SetPasswordController::class, 'store'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:5,60')
     ->name('password.update');
 
 Route::permanentRedirect('/admin/login', '/login');

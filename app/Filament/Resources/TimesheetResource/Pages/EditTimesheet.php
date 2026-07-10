@@ -4,6 +4,7 @@ namespace App\Filament\Resources\TimesheetResource\Pages;
 
 use App\Filament\Resources\TimesheetResource;
 use App\Filament\Resources\TimesheetResource\Concerns\CanSubmitTimesheet;
+use App\Models\Timesheet;
 use App\Support\TimesheetAccess;
 use Carbon\Carbon;
 use Filament\Actions;
@@ -28,7 +29,11 @@ class EditTimesheet extends EditRecord
 
     protected function beforeSave(): void
     {
-        $this->record->refresh();
+        // Filament wraps save in a DB transaction, so this lock holds until commit.
+        $this->record = Timesheet::query()
+            ->whereKey($this->record->getKey())
+            ->lockForUpdate()
+            ->firstOrFail();
 
         if (! TimesheetAccess::userCanEditTimesheet(auth()->user(), $this->record)) {
             throw new AuthorizationException('This timesheet cannot be edited in its current status.');
