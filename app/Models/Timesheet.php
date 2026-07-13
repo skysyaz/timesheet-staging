@@ -31,6 +31,16 @@ class Timesheet extends Model
         ];
     }
 
+    protected static function booted(): void
+    {
+        // Ensure attachment files are removed with the timesheet. Deleting each
+        // attachment through the model (rather than relying on the database
+        // cascade) fires TimesheetAttachment's own cleanup that unlinks files.
+        static::deleting(function (Timesheet $timesheet): void {
+            $timesheet->attachments()->get()->each->delete();
+        });
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -44,6 +54,11 @@ class Timesheet extends Model
     public function approvalLogs()
     {
         return $this->hasMany(ApprovalLog::class);
+    }
+
+    public function attachments()
+    {
+        return $this->hasMany(TimesheetAttachment::class)->latest('id');
     }
 
     public function latestApprovalLog(string $action): ?ApprovalLog
@@ -100,22 +115,22 @@ class Timesheet extends Model
     public function totalRegularHours(): float
     {
         $hours = $this->hours;
-        
+
         if (! is_array($hours)) {
             return 0.0;
         }
-        
+
         return array_sum($hours);
     }
 
     public function totalOvertimeHours(): float
     {
         $overtimeHours = $this->overtime_hours;
-        
+
         if (! is_array($overtimeHours)) {
             return 0.0;
         }
-        
+
         return array_sum($overtimeHours);
     }
 
@@ -211,7 +226,7 @@ class Timesheet extends Model
         if (! $this->relationLoaded('project')) {
             $this->load('project');
         }
-        
+
         $project = $this->project;
 
         if ($this->isPendingPm()) {

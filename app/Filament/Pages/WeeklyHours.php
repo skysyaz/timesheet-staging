@@ -2,6 +2,8 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\Timesheet;
+use App\Models\TimesheetAttachment;
 use App\Models\User;
 use App\Support\TimesheetAccess;
 use App\Support\WeeklyHoursAccess;
@@ -12,9 +14,14 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Validation\ValidationException;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class WeeklyHours extends Page
 {
+    use WithFileUploads;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-calendar-days';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Time Tracking';
@@ -35,6 +42,14 @@ class WeeklyHours extends Page
 
     /** @var list<array<string, mixed>> */
     public array $rows = [];
+
+    /**
+     * Pending file uploads keyed by row index. Livewire streams the selected
+     * file here before {@see uploadAttachment()} persists it.
+     *
+     * @var array<int, TemporaryUploadedFile>
+     */
+    public array $rowUploads = [];
 
     public function mount(): void
     {
@@ -78,7 +93,7 @@ class WeeklyHours extends Page
     {
         $start = Carbon::parse($this->weekStart);
 
-        return $start->format('F Y') . ' – Week ' . $start->isoWeek();
+        return $start->format('F Y').' – Week '.$start->isoWeek();
     }
 
     /**
@@ -189,6 +204,7 @@ class WeeklyHours extends Page
             'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
             'editable' => true,
+            'attachments' => [],
         ];
     }
 
@@ -210,6 +226,105 @@ class WeeklyHours extends Page
         }
     }
 
+    /**
+     * Persist the file staged in {@see $rowUploads} for the given row. The row
+     * must already be saved (have an id) and be editable by the current user.
+     */
+    public function uploadAttachment(int $rowIndex): void
+    {
+        if (! $this->canEditSheet()) {
+            return;
+        }
+
+        $file = $this->rowUploads[$rowIndex] ?? null;
+        $row = $this->rows[$rowIndex] ?? null;
+
+        if (! $file || ! $row || ! ($row['editable'] ?? false)) {
+            return;
+        }
+
+        $timesheetId = $row['id'] ?? null;
+
+        if (! $timesheetId) {
+            Notification::make()
+                ->title('Save the row before attaching files.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->validate([
+            "rowUploads.{$rowIndex}" => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt'],
+        ], attributes: ["rowUploads.{$rowIndex}" => 'attachment']);
+
+        $this->authorizeSelectedUser();
+
+        $timesheet = Timesheet::query()
+            ->where('user_id', $this->selectedUserId)
+            ->find($timesheetId);
+
+        if (! $timesheet || ! TimesheetAccess::userCanEditTimesheet(auth()->user(), $timesheet)) {
+            Notification::make()
+                ->title('This row can no longer be edited.')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $path = $file->store("timesheet-attachments/{$timesheet->id}", 'local');
+
+        $timesheet->attachments()->create([
+            'uploaded_by' => auth()->id(),
+            'disk' => 'local',
+            'path' => $path,
+            'original_name' => $file->getClientOriginalName(),
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
+        ]);
+
+        unset($this->rowUploads[$rowIndex]);
+        $this->loadSheet();
+
+        Notification::make()
+            ->title('Attachment uploaded')
+            ->success()
+            ->send();
+    }
+
+    public function removeAttachment(int $attachmentId): void
+    {
+        if (! $this->canEditSheet()) {
+            return;
+        }
+
+        $this->authorizeSelectedUser();
+
+        $attachment = TimesheetAttachment::query()
+            ->with('timesheet')
+            ->whereHas('timesheet', fn ($query) => $query->where('user_id', $this->selectedUserId))
+            ->find($attachmentId);
+
+        if (! $attachment || ! $attachment->timesheet
+            || ! TimesheetAccess::userCanEditTimesheet(auth()->user(), $attachment->timesheet)) {
+            return;
+        }
+
+        $attachment->delete();
+        $this->loadSheet();
+
+        Notification::make()
+            ->title('Attachment removed')
+            ->success()
+            ->send();
+    }
+
+    public function attachmentDownloadUrl(int $attachmentId): string
+    {
+        return route('timesheet-attachments.download', ['attachment' => $attachmentId]);
+    }
+
     public function save(): void
     {
         if (! $this->canEditSheet()) {
@@ -225,7 +340,7 @@ class WeeklyHours extends Page
 
         try {
             $this->sheet()->saveRows($this->rows, auth()->user());
-        } catch (\Illuminate\Validation\ValidationException $exception) {
+        } catch (ValidationException $exception) {
             Notification::make()
                 ->title('Could not save weekly hours')
                 ->body($this->formatValidationError($exception))
@@ -244,7 +359,7 @@ class WeeklyHours extends Page
             ->send();
     }
 
-    public function formatHours(float | int | string | null $hours): string
+    public function formatHours(float|int|string|null $hours): string
     {
         return WeeklyHoursFormatter::display($hours);
     }
@@ -341,7 +456,7 @@ class WeeklyHours extends Page
         $target = $this->selectedUser();
 
         if (! $viewer) {
-            throw new AuthorizationException();
+            throw new AuthorizationException;
         }
 
         if ($viewer->isEmployee() && $viewer->id !== $target->id) {
@@ -369,7 +484,7 @@ class WeeklyHours extends Page
         }
     }
 
-    protected function formatValidationError(\Illuminate\Validation\ValidationException $exception): string
+    protected function formatValidationError(ValidationException $exception): string
     {
         return collect($exception->errors())
             ->flatMap(function (array $messages, string $key): array {

@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\SetPasswordController;
 use App\Http\Controllers\FaviconController;
 use App\Http\Controllers\PdfController;
+use App\Http\Controllers\TimesheetAttachmentController;
 use App\Http\Controllers\UptimeHeartbeatController;
 use Illuminate\Support\Facades\Route;
 
@@ -56,6 +57,8 @@ Route::middleware(['auth'])->group(function () {
         ->where('weekStart', '[0-9]{4}-[0-9]{2}-[0-9]{2}')
         ->name('weekly-hours.print');
     Route::get('/pdf/summary', [PdfController::class, 'summary'])->name('pdf.summary');
+    Route::get('/timesheet-attachments/{attachment}/download', [TimesheetAttachmentController::class, 'download'])
+        ->name('timesheet-attachments.download');
 });
 
 Route::middleware('throttle:60,1')->group(function () {
