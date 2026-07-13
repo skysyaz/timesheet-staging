@@ -8,6 +8,7 @@ use App\Support\ProjectDisplay;
 use App\Support\TimesheetAccess;
 use Filament\Actions;
 use Filament\Forms;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Pages\ViewRecord;
@@ -87,7 +88,7 @@ class ViewTimesheet extends ViewRecord
                                     ->date('d/m/Y'),
                                 TextEntry::make('week_number')
                                     ->label('Week Number')
-                                    ->getStateUsing(fn (Model $record) => 'Week ' . $record->week_start->isoWeek() . ', ' . $record->week_start->year),
+                                    ->getStateUsing(fn (Model $record) => 'Week '.$record->week_start->isoWeek().', '.$record->week_start->year),
                                 TextEntry::make('status')
                                     ->badge()
                                     ->color(fn (string $state) => match ($state) {
@@ -102,7 +103,7 @@ class ViewTimesheet extends ViewRecord
                         Section::make('Approval History')
                             ->icon('heroicon-o-clipboard-document-check')
                             ->schema([
-                                \Filament\Infolists\Components\RepeatableEntry::make('approvalLogs')
+                                RepeatableEntry::make('approvalLogs')
                                     ->schema([
                                         TextEntry::make('approver_name')
                                             ->label('By')
@@ -134,6 +135,15 @@ class ViewTimesheet extends ViewRecord
                                     ->hiddenLabel(),
                             ])
                             ->visible(fn (Model $record) => filled($record->notes)),
+
+                        Section::make('Attachments')
+                            ->icon('heroicon-o-paper-clip')
+                            ->schema([
+                                ViewEntry::make('attachments')
+                                    ->hiddenLabel()
+                                    ->view('filament.infolists.timesheet-attachments'),
+                            ])
+                            ->visible(fn (Model $record) => $record->attachments()->exists()),
                     ])->grow(),
 
                     Group::make([

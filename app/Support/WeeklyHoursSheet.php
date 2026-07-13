@@ -34,7 +34,7 @@ class WeeklyHoursSheet
     public function loadRows(): array
     {
         $timesheets = Timesheet::query()
-            ->with('project')
+            ->with(['project', 'attachments'])
             ->where('user_id', $this->user->id)
             ->whereDate('week_start', $this->weekStart->toDateString())
             ->orderBy('id')
@@ -263,8 +263,8 @@ class WeeklyHoursSheet
                 ],
                 [
                     'project_id' => [new ProjectMembershipForEmployee($this->user, $existing)],
-                    'hours' => [new ValidDailyHours()],
-                    'overtime_hours' => [new ValidDailyHours()],
+                    'hours' => [new ValidDailyHours],
+                    'overtime_hours' => [new ValidDailyHours],
                 ],
             );
 
@@ -375,6 +375,11 @@ class WeeklyHoursSheet
             ),
             'status' => $timesheet->status,
             'editable' => $timesheet->isEditable(),
+            'attachments' => $timesheet->attachments->map(fn ($attachment): array => [
+                'id' => $attachment->id,
+                'name' => $attachment->original_name,
+                'size' => $attachment->humanSize(),
+            ])->all(),
         ];
     }
 
@@ -401,6 +406,7 @@ class WeeklyHoursSheet
             'overtime_hours' => [0, 0, 0, 0, 0, 0, 0],
             'status' => 'draft',
             'editable' => true,
+            'attachments' => [],
         ];
     }
 

@@ -7,6 +7,25 @@
         .corp-weekly-hours-ot-row .corp-weekly-hours-hour-input { border-color: rgb(253 230 138 / 0.8); background: rgb(255 251 235 / 0.5); }
         .corp-weekly-hours-total-row-ot td { background: rgb(255 251 235 / 0.8); font-weight: 600; }
         .dark .corp-weekly-hours-total-row-ot td { background: rgb(69 26 3 / 0.3); }
+        .corp-weekly-hours-attach-row td { border-top: 0; background: rgb(248 250 252 / 0.7); }
+        .dark .corp-weekly-hours-attach-row td { background: rgb(30 41 59 / 0.3); }
+        .corp-weekly-hours-attach-label { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: rgb(100 116 139); }
+        .dark .corp-weekly-hours-attach-label { color: rgb(148 163 184); }
+        .corp-weekly-hours-attachments { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+        .corp-weekly-hours-attach-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.5rem; border-radius: 9999px; background: rgb(226 232 240 / 0.7); font-size: 0.8rem; }
+        .dark .corp-weekly-hours-attach-chip { background: rgb(51 65 85 / 0.6); }
+        .corp-weekly-hours-attach-chip a { color: rgb(37 99 235); text-decoration: none; font-weight: 500; }
+        .corp-weekly-hours-attach-chip a:hover { text-decoration: underline; }
+        .dark .corp-weekly-hours-attach-chip a { color: rgb(96 165 250); }
+        .corp-weekly-hours-attach-size { color: rgb(100 116 139); font-size: 0.7rem; }
+        .corp-weekly-hours-attach-remove { display: inline-flex; color: rgb(148 163 184); }
+        .corp-weekly-hours-attach-remove:hover { color: rgb(220 38 38); }
+        .corp-weekly-hours-attach-empty, .corp-weekly-hours-attach-hint { color: rgb(148 163 184); font-size: 0.8rem; font-style: italic; }
+        .corp-weekly-hours-attach-upload { display: inline-flex; align-items: center; gap: 0.5rem; }
+        .corp-weekly-hours-attach-input { font-size: 0.75rem; max-width: 15rem; }
+        .corp-weekly-hours-attach-btn { padding: 0.2rem 0.6rem; border-radius: 0.375rem; background: rgb(37 99 235); color: #fff; font-size: 0.75rem; font-weight: 600; }
+        .corp-weekly-hours-attach-btn:disabled { opacity: 0.5; }
+        .corp-weekly-hours-attach-error { margin-top: 0.35rem; color: rgb(220 38 38); font-size: 0.75rem; }
     </style>
     <div class="corp-weekly-hours">
         <div class="corp-weekly-hours-toolbar">
@@ -112,7 +131,7 @@
                                 {{ $this->rowDuration($row) }}
                             </td>
                             @if ($this->canEditSheet())
-                                <td class="corp-weekly-hours-actions" rowspan="2">
+                                <td class="corp-weekly-hours-actions" rowspan="3">
                                     @if ($editable)
                                         <button
                                             type="button"
@@ -151,6 +170,68 @@
                             @endforeach
                             <td class="corp-weekly-hours-duration">
                                 {{ $this->rowOvertimeDuration($row) }}
+                            </td>
+                        </tr>
+                        @php
+                            $attachments = $row['attachments'] ?? [];
+                        @endphp
+                        <tr
+                            wire:key="weekly-hours-attach-row-{{ $row['id'] ?? 'new-' . $rowIndex }}"
+                            class="corp-weekly-hours-attach-row"
+                        >
+                            <td class="corp-weekly-hours-attach-label">Files</td>
+                            <td colspan="9">
+                                <div class="corp-weekly-hours-attachments">
+                                    @forelse ($attachments as $attachment)
+                                        <span class="corp-weekly-hours-attach-chip">
+                                            <x-filament::icon icon="heroicon-m-paper-clip" class="h-3.5 w-3.5" />
+                                            <a href="{{ $this->attachmentDownloadUrl($attachment['id']) }}" target="_blank" rel="noopener">
+                                                {{ $attachment['name'] }}
+                                            </a>
+                                            <span class="corp-weekly-hours-attach-size">{{ $attachment['size'] }}</span>
+                                            @if ($editable)
+                                                <button
+                                                    type="button"
+                                                    wire:click="removeAttachment({{ $attachment['id'] }})"
+                                                    wire:confirm="Remove this attachment?"
+                                                    class="corp-weekly-hours-attach-remove"
+                                                    aria-label="Remove attachment"
+                                                >
+                                                    <x-filament::icon icon="heroicon-m-x-mark" class="h-3 w-3" />
+                                                </button>
+                                            @endif
+                                        </span>
+                                    @empty
+                                        <span class="corp-weekly-hours-attach-empty">No files attached</span>
+                                    @endforelse
+
+                                    @if ($editable)
+                                        @if ($row['id'] ?? null)
+                                            <span class="corp-weekly-hours-attach-upload">
+                                                <input
+                                                    type="file"
+                                                    wire:model="rowUploads.{{ $rowIndex }}"
+                                                    class="corp-weekly-hours-attach-input"
+                                                />
+                                                <span wire:loading wire:target="rowUploads.{{ $rowIndex }}" class="corp-weekly-hours-attach-hint">Uploading…</span>
+                                                <button
+                                                    type="button"
+                                                    wire:click="uploadAttachment({{ $rowIndex }})"
+                                                    wire:loading.attr="disabled"
+                                                    wire:target="rowUploads.{{ $rowIndex }},uploadAttachment"
+                                                    class="corp-weekly-hours-attach-btn"
+                                                >
+                                                    Attach
+                                                </button>
+                                            </span>
+                                        @else
+                                            <span class="corp-weekly-hours-attach-hint">Save the row to attach files.</span>
+                                        @endif
+                                    @endif
+                                </div>
+                                @error('rowUploads.' . $rowIndex)
+                                    <div class="corp-weekly-hours-attach-error">{{ $message }}</div>
+                                @enderror
                             </td>
                         </tr>
                     @endforeach
