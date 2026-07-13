@@ -23,7 +23,7 @@ RUN sed -i '/->withMiddleware(function (Middleware $middleware): void {/a\      
     && npm ci --no-audit --no-fund \
     && npm run build \
     && rm -rf node_modules \
-    && mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views storage/app/private/livewire-tmp storage/app/public bootstrap/cache \
     && chmod -R 777 storage bootstrap/cache
 
 EXPOSE 8080
