@@ -27,4 +27,7 @@ RUN sed -i '/->withMiddleware(function (Middleware $middleware): void {/a\      
     && chmod -R 777 storage bootstrap/cache
 
 EXPOSE 8080
-CMD ["sh", "-c", "php artisan serve --host=0.0.0.0 --port=8080"]
+# Apply any pending database migrations before serving so container-based
+# deploys stay in sync with the codebase (the VPS deploy script does this too).
+# Fail fast if migrations can't be applied rather than serving a stale schema.
+CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8080"]
