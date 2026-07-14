@@ -20,22 +20,22 @@ ENV PHP_CLI_SERVER_WORKERS=4
 
 WORKDIR /app
 
-# Copy dependency manifests first so composer/npm installs are cached
-# and only re-run when composer.lock or package-lock.json changes.
+# Copy dependency manifests first so composer install is cached
+# and only re-runs when composer.lock changes. Skip post-install
+# scripts (they need the full app source which isn't here yet).
 COPY composer.json composer.lock ./
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress --no-scripts \
     && mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views storage/app/private/livewire-tmp storage/app/public bootstrap/cache \
     && chmod -R 777 storage bootstrap/cache
 
-COPY package.json package-lock.json ./
+# Copy the full application source. This layer changes on every commit
+# but the composer install layer above stays cached.
+COPY . .
 RUN npm ci --no-audit --no-fund \
     && npm run build \
-    && rm -rf node_modules
-
-# Now copy the rest of the application code — this layer changes on every
-# commit, but the expensive composer/npm layers above stay cached.
-COPY . .
-RUN chmod +x docker/entrypoint.sh
+    && rm -rf node_modules \
+    && composer dump-autoload --optimize --no-dev \
+    && chmod +x docker/entrypoint.sh
 
 # Uploaded attachments live under storage/app (local disk root: storage/app/private).
 # Declare it as a volume so a Pier persistent volume can be mounted here and
