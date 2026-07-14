@@ -1,7 +1,7 @@
 FROM node:22-alpine AS node
 FROM php:8.4-fpm-alpine
 
-RUN apk add --no-cache icu-libs libzip libpng libjpeg-turbo freetype libxml2 oniguruma curl libpq
+RUN apk add --no-cache icu-libs libzip libpng libjpeg-turbo freetype libxml2 oniguruma curl libpq supervisor
 
 RUN apk add --no-cache --virtual .build-deps $PHPIZE_DEPS icu-dev libzip-dev libpng-dev libjpeg-turbo-dev freetype-dev libxml2-dev oniguruma-dev postgresql-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
@@ -15,19 +15,33 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
+# Let `php artisan serve` handle concurrent requests instead of one at a time.
+ENV PHP_CLI_SERVER_WORKERS=4
+
 WORKDIR /app
 COPY . .
 
-RUN sed -i '/->withMiddleware(function (Middleware $middleware): void {/a\        $middleware->trustProxies(at: "*");' bootstrap/app.php \
-    && composer install --no-dev --no-interaction --no-progress \
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-progress \
     && npm ci --no-audit --no-fund \
     && npm run build \
     && rm -rf node_modules \
+    && chmod +x docker/entrypoint.sh \
     && mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views storage/app/private/livewire-tmp storage/app/public bootstrap/cache \
     && chmod -R 777 storage bootstrap/cache
 
+# Uploaded attachments live under storage/app (local disk root: storage/app/private).
+# Declare it as a volume so a Pier persistent volume can be mounted here and
+# files survive container rebuilds.
+VOLUME ["/app/storage/app"]
+
 EXPOSE 8080
-# Apply any pending database migrations before serving so container-based
-# deploys stay in sync with the codebase (the VPS deploy script does this too).
-# Fail fast if migrations can't be applied rather than serving a stale schema.
-CMD ["sh", "-c", "php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=8080"]
+
+# Liveness probe. /login is public (200); /up is IP-restricted and would 404
+# from the loopback interface, so it is not suitable as a container healthcheck.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+    CMD curl -fsS http://127.0.0.1:8080/login >/dev/null || exit 1
+
+# entrypoint runs migrations + cache warming, then execs supervisor, which
+# supervises the web server, queue worker, and scheduler in one container.
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["supervisord", "-c", "/app/docker/supervisord.conf"]

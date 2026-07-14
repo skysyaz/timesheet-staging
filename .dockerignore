@@ -1,0 +1,18 @@
+# Keep the build context small and avoid baking host-only / secret files
+# into image layers. composer install and npm ci regenerate vendor/ and
+# node_modules/ inside the build, so the local copies must never be shipped.
+.git
+.gitignore
+.github
+node_modules
+vendor
+.env
+.env.*
+!.env.example
+storage/logs/*
+storage/framework/cache/data/*
+storage/framework/sessions/*
+storage/framework/views/*
+.phpunit.result.cache
+tests
+*.md
