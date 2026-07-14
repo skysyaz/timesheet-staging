@@ -206,27 +206,23 @@
                                     @endforelse
 
                                     @if ($editable)
-                                        @if ($row['id'] ?? null)
-                                            <span class="corp-weekly-hours-attach-upload">
-                                                <input
-                                                    type="file"
-                                                    wire:model="rowUploads.{{ $rowIndex }}"
-                                                    class="corp-weekly-hours-attach-input"
-                                                />
-                                                <span wire:loading wire:target="rowUploads.{{ $rowIndex }}" class="corp-weekly-hours-attach-hint">Uploading…</span>
-                                                <button
-                                                    type="button"
-                                                    wire:click="uploadAttachment({{ $rowIndex }})"
-                                                    wire:loading.attr="disabled"
-                                                    wire:target="rowUploads.{{ $rowIndex }},uploadAttachment"
-                                                    class="corp-weekly-hours-attach-btn"
-                                                >
-                                                    Attach
-                                                </button>
-                                            </span>
-                                        @else
-                                            <span class="corp-weekly-hours-attach-hint">Save the row to attach files.</span>
-                                        @endif
+                                        <span class="corp-weekly-hours-attach-upload">
+                                            <input
+                                                type="file"
+                                                wire:model="rowUploads.{{ $rowIndex }}"
+                                                class="corp-weekly-hours-attach-input"
+                                            />
+                                            <span wire:loading wire:target="rowUploads.{{ $rowIndex }}" class="corp-weekly-hours-attach-hint">Uploading…</span>
+                                            <button
+                                                type="button"
+                                                wire:click="uploadAttachment({{ $rowIndex }})"
+                                                wire:loading.attr="disabled"
+                                                wire:target="rowUploads.{{ $rowIndex }},uploadAttachment"
+                                                class="corp-weekly-hours-attach-btn"
+                                            >
+                                                Attach
+                                            </button>
+                                        </span>
                                     @endif
                                 </div>
                                 @error('rowUploads.' . $rowIndex)

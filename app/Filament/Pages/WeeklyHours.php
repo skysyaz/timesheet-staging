@@ -227,8 +227,9 @@ class WeeklyHours extends Page
     }
 
     /**
-     * Persist the file staged in {@see $rowUploads} for the given row. The row
-     * must already be saved (have an id) and be editable by the current user.
+     * Persist the file staged in {@see $rowUploads} for the given row. If the
+     * row hasn't been saved yet (no id), it is auto-saved first so the
+     * attachment can be linked to a real timesheet record.
      */
     public function uploadAttachment(int $rowIndex): void
     {
@@ -243,22 +244,28 @@ class WeeklyHours extends Page
             return;
         }
 
-        $timesheetId = $row['id'] ?? null;
-
-        if (! $timesheetId) {
-            Notification::make()
-                ->title('Save the row before attaching files.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
         $this->validate([
             "rowUploads.{$rowIndex}" => ['file', 'max:10240', 'mimes:pdf,jpg,jpeg,png,gif,webp,doc,docx,xls,xlsx,csv,txt'],
         ], attributes: ["rowUploads.{$rowIndex}" => 'attachment']);
 
         $this->authorizeSelectedUser();
+
+        $timesheetId = $row['id'] ?? null;
+
+        if (! $timesheetId) {
+            $this->save();
+            $row = $this->rows[$rowIndex] ?? null;
+            $timesheetId = $row['id'] ?? null;
+
+            if (! $timesheetId) {
+                Notification::make()
+                    ->title('Could not save the row. Fill in a project first.')
+                    ->warning()
+                    ->send();
+
+                return;
+            }
+        }
 
         $timesheet = Timesheet::query()
             ->where('user_id', $this->selectedUserId)
