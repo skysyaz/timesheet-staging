@@ -20,12 +20,30 @@
         .corp-weekly-hours-attach-size { color: rgb(100 116 139); font-size: 0.7rem; }
         .corp-weekly-hours-attach-remove { display: inline-flex; color: rgb(148 163 184); }
         .corp-weekly-hours-attach-remove:hover { color: rgb(220 38 38); }
-        .corp-weekly-hours-attach-empty, .corp-weekly-hours-attach-hint { color: rgb(148 163 184); font-size: 0.8rem; font-style: italic; }
-        .corp-weekly-hours-attach-upload { display: inline-flex; align-items: center; gap: 0.5rem; }
-        .corp-weekly-hours-attach-input { font-size: 0.75rem; max-width: 15rem; }
-        .corp-weekly-hours-attach-btn { padding: 0.2rem 0.6rem; border-radius: 0.375rem; background: rgb(37 99 235); color: #fff; font-size: 0.75rem; font-weight: 600; }
-        .corp-weekly-hours-attach-btn:disabled { opacity: 0.5; }
+        .corp-weekly-hours-attach-empty { color: rgb(148 163 184); font-size: 0.8rem; font-style: italic; }
         .corp-weekly-hours-attach-error { margin-top: 0.35rem; color: rgb(220 38 38); font-size: 0.75rem; }
+
+        /* Enhanced upload zone */
+        .corp-upload-zone { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.35rem 0.75rem; border: 2px dashed rgb(148 163 184 / 0.5); border-radius: 0.5rem; background: rgb(248 250 252 / 0.5); cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+        .corp-upload-zone:hover { border-color: rgb(37 99 235); background: rgb(219 234 254 / 0.3); }
+        .dark .corp-upload-zone { border-color: rgb(71 85 105 / 0.5); background: rgb(30 41 59 / 0.4); }
+        .dark .corp-upload-zone:hover { border-color: rgb(96 165 250); background: rgb(30 58 138 / 0.2); }
+        .corp-upload-zone.has-file { border-style: solid; border-color: rgb(34 197 94); background: rgb(240 253 244 / 0.5); }
+        .dark .corp-upload-zone.has-file { border-color: rgb(74 222 128); background: rgb(20 83 45 / 0.2); }
+        .corp-upload-zone input[type="file"] { font-size: 0; width: 0; height: 0; opacity: 0; position: absolute; }
+        .corp-upload-label { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 600; color: rgb(71 85 105); }
+        .dark .corp-upload-label { color: rgb(148 163 184); }
+        .corp-upload-zone:hover .corp-upload-label { color: rgb(37 99 235); }
+        .dark .corp-upload-zone:hover .corp-upload-label { color: rgb(96 165 250); }
+        .corp-upload-icon { flex-shrink: 0; }
+        .corp-upload-file-name { font-size: 0.75rem; color: rgb(34 197 94); font-weight: 600; max-width: 12rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dark .corp-upload-file-name { color: rgb(74 222 128); }
+        .corp-attach-btn { padding: 0.25rem 0.75rem; border-radius: 0.375rem; background: rgb(37 99 235); color: #fff; font-size: 0.75rem; font-weight: 600; border: none; cursor: pointer; transition: background 0.2s, transform 0.1s; display: inline-flex; align-items: center; gap: 0.25rem; }
+        .corp-attach-btn:hover { background: rgb(29 78 216); }
+        .corp-attach-btn:active { transform: scale(0.97); }
+        .corp-attach-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .corp-attach-spinner { width: 0.875rem; height: 0.875rem; border: 2px solid rgb(255 255 255 / 0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
     <div class="corp-weekly-hours">
         <div class="corp-weekly-hours-toolbar">
@@ -204,27 +222,41 @@
                                     @empty
                                         <span class="corp-weekly-hours-attach-empty">No files attached</span>
                                     @endforelse
+                                </div>
 
-                                    @if ($editable)
-                                        <span class="corp-weekly-hours-attach-upload">
+                                @if ($editable)
+                                    <div class="mt-2 flex items-center gap-2 flex-wrap">
+                                        <label class="corp-upload-zone" wire:key="upload-{{ $rowIndex }}">
+                                            <x-filament::icon icon="heroicon-m-arrow-up-tray" class="h-4 w-4 corp-upload-icon text-primary-500" />
                                             <input
                                                 type="file"
                                                 wire:model="rowUploads.{{ $rowIndex }}"
-                                                class="corp-weekly-hours-attach-input"
+                                                class="sr-only"
                                             />
-                                            <span wire:loading wire:target="rowUploads.{{ $rowIndex }}" class="corp-weekly-hours-attach-hint">Uploading…</span>
-                                            <button
-                                                type="button"
-                                                wire:click="uploadAttachment({{ $rowIndex }})"
-                                                wire:loading.attr="disabled"
-                                                wire:target="rowUploads.{{ $rowIndex }},uploadAttachment"
-                                                class="corp-weekly-hours-attach-btn"
-                                            >
+                                            <span class="corp-upload-label">
+                                                <span wire:loading.remove wire:target="rowUploads.{{ $rowIndex }}">Choose file</span>
+                                                <span wire:loading wire:target="rowUploads.{{ $rowIndex }}">Uploading…</span>
+                                            </span>
+                                            <span wire:loading.remove wire:target="uploadAttachment" class="corp-upload-file-name" x-data x-text="$wire.rowUploads[{{ $rowIndex }}]?.name || ''" style="display:none"></span>
+                                        </label>
+                                        <button
+                                            type="button"
+                                            wire:click="uploadAttachment({{ $rowIndex }})"
+                                            wire:loading.attr="disabled"
+                                            wire:target="rowUploads.{{ $rowIndex }},uploadAttachment"
+                                            class="corp-attach-btn"
+                                        >
+                                            <span wire:loading.remove wire:target="rowUploads.{{ $rowIndex }},uploadAttachment">
+                                                <x-filament::icon icon="heroicon-m-check" class="h-3.5 w-3.5 inline" />
                                                 Attach
-                                            </button>
-                                        </span>
-                                    @endif
-                                </div>
+                                            </span>
+                                            <span wire:loading wire:target="rowUploads.{{ $rowIndex }},uploadAttachment" class="inline-flex items-center gap-1">
+                                                <span class="corp-attach-spinner"></span>
+                                                Uploading…
+                                            </span>
+                                        </button>
+                                    </div>
+                                @endif
                                 @error('rowUploads.' . $rowIndex)
                                     <div class="corp-weekly-hours-attach-error">{{ $message }}</div>
                                 @enderror
