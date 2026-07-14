@@ -14,6 +14,7 @@ use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
@@ -282,13 +283,24 @@ class WeeklyHours extends Page
 
         $path = $file->store("timesheet-attachments/{$timesheet->id}", 'local');
 
+        $storedDisk = Storage::disk('local');
+        $storedPath = "timesheet-attachments/{$timesheet->id}/" . basename($path);
+
+        try {
+            $mimeType = $file->getMimeType() ?? $storedDisk->mimeType($storedPath);
+            $fileSize = $storedDisk->size($storedPath);
+        } catch (\Throwable) {
+            $mimeType = $storedDisk->mimeType($storedPath);
+            $fileSize = $storedDisk->size($storedPath);
+        }
+
         $timesheet->attachments()->create([
             'uploaded_by' => auth()->id(),
             'disk' => 'local',
-            'path' => $path,
+            'path' => $storedPath,
             'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getMimeType(),
-            'size' => $file->getSize(),
+            'mime_type' => $mimeType,
+            'size' => $fileSize,
         ]);
 
         unset($this->rowUploads[$rowIndex]);
